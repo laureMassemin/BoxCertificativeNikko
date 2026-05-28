@@ -42,7 +42,7 @@ def build_distance_matrix(places):
 
 def nearest_neighbor_tour(distance_matrix):
     """
-    Generate a tour using the nearest neighbor heuristic.
+    Generate a tour using the nearest neighbor.
     Parameters:
         distance_matrix (list): A list representing the distance matrix.
     Returns:
@@ -107,7 +107,7 @@ def two_opt_swap(tour, distance_matrix):
                     best_tour = True
     return tour
 
-def generate_tour(places):
+def plan_tour(places):
     """
     Generate a tour for a list of places using the nearest neighbor heuristic followed by 2-opt optimization.
     Parameters:
@@ -132,7 +132,7 @@ if __name__ == "__main__":
         PlaceSchema(name="Sapporo", lat=43.0618,    lon=141.3545),
     ]
     
-    result = generate_tour(places)
+    result = plan_tour(places)
     print("Distance totale :", result["length"], "km")
     print("Ordre optimal :")
     for p in result["tour"]:

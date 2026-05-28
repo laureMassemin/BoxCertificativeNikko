@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from jose import jwt
 from database import get_db
+from algorithm import (plan_tour)
 
 
 router = APIRouter()
@@ -74,13 +75,11 @@ def generate_tour(tour_data: TourCreate):
     if len(tour_data.places) <2:
         raise HTTPException(status_code=400, detail="Cannot generate a tour with less than 2 cities.")
     try:
-        #algo_result = optimize_tour(tour_data.places)
-        #return algo_result
+        result = plan_tour(tour_data.places)
 
         return {
-            "message" : "Waiting for the algorithm",
-            "total_distance" : 0.0,
-            "optimized_route" : tour_data.places
+            "total_distance" : result["length"],
+            "optimized_route" : result["tour"]
         }
     except Exception as e :
         raise HTTPException(status_code=500, detail="Internal server error during tour calculation")
