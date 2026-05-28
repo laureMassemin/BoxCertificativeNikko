@@ -1,16 +1,48 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from geopy.geocoders import Nominatim
-from models import UserLogin, Place, TourCreate
+from models import UserLogin,User, Place, TourCreate
+from sqlalchemy.orm import Session
+from passlib.context import CryptContext
+from jose import jwt
+from database import get_db
+
 
 router = APIRouter()
 
 geolocator = Nominatim(user_agent="nikko_planner")
+router = APIRouter()
+
+SECRET_KEY = "change-this-secret"
+ALGORITHM = "HS256"
+pwd_context = CryptContext(schemes=["bcrypt"])
+
+@router.post("/register")
+def register(data: UserLogin, db: Session = Depends(get_db)):
+    existing_user = db.query(User).filter(User.username == data.username).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Username already taken")
+    else:
+        hashed_password = pwd_context.hash(data.password)
+        new_user = User(username=data.username, password=hashed_password)
+        db.add(new_user)
+        db.commit()
+        return {"message": "User created successfully"}
 
 @router.post("/login")
-def login(user_data: UserLogin):
-    #mock user
-    return {"token": "faux_token_temporaire", "message": "Login success"}
+def login(data: UserLogin, db: Session = Depends(get_db)):
+    username = data.username
+    user = db.query(User).filter(User.username == username).first()
+    if not user : 
+        raise HTTPException(status_code=401, detail="User not found")
+    else:
+        password_is_correct = pwd_context.verify(data.password, user.password)
+        if not password_is_correct:
+            raise HTTPException(status_code=401, detail="Wrong password")
+        else:
+            token = jwt.encode({"sub": str(user.id)}, SECRET_KEY, algorithm=ALGORITHM)
+            return {"token": token, "username": user.username}
+
 
 #City search test
 @router.get("/places/search")
