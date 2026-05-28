@@ -22,6 +22,10 @@ export async function login(username: string, password: string): Promise<AuthRes
   localStorage.setItem('username', res.data.username)
   return res.data
 }
+export async function getTrip(id: number) {
+  const res = await http.get(`/tours/${id}`)
+  return res.data
+}
 
 // Remove token from localStorage
 export function logout(): void {

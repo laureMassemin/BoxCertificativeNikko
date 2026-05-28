@@ -39,6 +39,7 @@ class Place(Base):
     name    = Column(String, nullable=False)
     lat     = Column(Float, nullable=False)
     lon     = Column(Float, nullable=False)
+    order  = Column(Integer, nullable=False)  
 
     tour = relationship("Tour", back_populates="places")
 

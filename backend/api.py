@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from geopy.geocoders import Nominatim
-from models import UserLogin,User, Place, TourCreate
+from models import UserLogin, User, Place, TourCreate, Tour
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from jose import jwt
@@ -83,3 +83,22 @@ def generate_tour(tour_data: TourCreate):
         }
     except Exception as e :
         raise HTTPException(status_code=500, detail="Internal server error during tour calculation")
+    
+@router.get("/tours")
+def search_tours(id: int, db: Session = Depends(get_db)):
+    tour = db.query(Tour).filter(Tour.id == id).first()
+    if not tour:
+        raise HTTPException(status_code=404, detail="Tour not found")
+    
+    sorted_places = sorted(tour.places, key=lambda p: p.order)
+    
+    return {
+        "id": tour.id,
+        "owner_username": tour.owner.username,
+        "is_public": tour.is_public,
+        "total_distance": tour.total_distance,
+        "places": [
+            {"id": p.id, "name": p.name, "lat": p.lat, "lon": p.lon, "order": p.order}
+            for p in sorted_places
+        ]
+    }
