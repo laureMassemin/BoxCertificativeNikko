@@ -1,18 +1,21 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
+// Place interface for type safety
 interface Place {
   name: string
   lat: number
   lon: number
 }
 
+// Reactive states
 const searchQuery = ref('')
 const searchResults = ref<Place[]>([])
 const selectedPlaces = ref<Place[]>([])
 const errorMessage = ref('')
 const tourResult = ref<any>(null)
 
+// Fetch city coordinates from backend
 const searchCity = async () => {
   errorMessage.value = ''
   try {
@@ -26,6 +29,7 @@ const searchCity = async () => {
   }
 }
 
+// Add city to trip (prevents duplicates)
 const addPlaceToTrip = (place: Place) => {
   if (!selectedPlaces.value.find(p => p.name === place.name)) {
     selectedPlaces.value.push(place)
@@ -34,10 +38,12 @@ const addPlaceToTrip = (place: Place) => {
   searchQuery.value = ''
 }
 
+// Remove city from trip
 const removePlace = (index: number) => {
   selectedPlaces.value.splice(index, 1)
 }
 
+// Send trip payload to calculate optimal route
 const generateTour = async () => {
   errorMessage.value = ''
   
