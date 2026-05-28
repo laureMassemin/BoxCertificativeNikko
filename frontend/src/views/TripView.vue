@@ -58,12 +58,13 @@ const generateTour = async () => {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ places: selectedPlaces.value }) 
+      body: JSON.stringify({ is_public: false, places: selectedPlaces.value }) 
     })
     
     if (!response.ok) throw new Error("Error while calculating the tour")
     
     tourResult.value = await response.json()
+    console.log("Tour generated:", tourResult.value)
     
   } catch (error) {
     errorMessage.value = "Communication error with the server."
@@ -114,9 +115,13 @@ const generateTour = async () => {
 
     <div v-if="tourResult" style="border: 2px solid green; padding: 10px;">
       <h2>Route Generated</h2>
-      <p><strong>Server message:</strong> {{ tourResult.message }}</p>
-      <p><strong>Estimated total distance:</strong> {{ tourResult.total_distance }} km</p>
-      <p><i>(Waiting for the algorithm integration to display the ordered route)</i></p>
+      <p><strong>Total distance:</strong> {{ tourResult.total_distance?.toFixed(2) ?? '?' }} km</p>
+      <h3>Optimized order:</h3>
+      <ol>
+        <li v-for="place in tourResult.tour" :key="place.lat">
+          {{ place.name }}
+        </li>
+      </ol>
     </div>
   </div>
 </template>

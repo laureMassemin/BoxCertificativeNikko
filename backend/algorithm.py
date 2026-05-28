@@ -21,6 +21,17 @@ def distance (Va, Vb):
     distance = Rearth * acos(sin(lat1) * sin(lat2) + cos(lat1) * cos(lat2) * cos(lon1 - lon2))
     return distance
 
+def personalised_tour_length(places):
+    """
+    Calculate the total length of a tour by summing the distances between consecutive places, including the return trip to the starting point.
+    Parameters:
+        places (list): A list of tuples containing the latitudes and longitudes of the places
+    Returns:
+        float: The total length of the tour.
+    """
+    pass
+
+
 def build_distance_matrix(places):
     """
     Build a distance matrix for a list of places for remembering the calculated distances without recalculating.
