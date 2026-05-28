@@ -1,7 +1,11 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from typing import List
+from geopy.geocoders import Nominatim
 from models import UserLogin, Place, TourCreate
 
 router = APIRouter()
+
+geolocator = Nominatim(user_agent="nikko_planner")
 
 @router.post("/login")
 def login(user_data: UserLogin):
@@ -12,14 +16,34 @@ def login(user_data: UserLogin):
 @router.get("/places/search")
 def search_place(name: str):
     #Coordinate return simulation
-    return [
-        {"name": f"{name} Center", "lat": 48.8566, "lon": 2.3522},
-        {"name": f"{name} Station", "lat": 48.8738, "lon": 2.3596}
-    ]
+    try:
+        locations = geolocator.geocode(name, exactly_one=False, limit=3)
+        if not locations:
+            raise HTTPException(status_code=404, detail=f"City {name} not found.")
+
+        results=[]
+        for loc in locations:
+            results.append(
+                Place(
+                    name=loc.adress,
+                    lat=loc.latitude,
+                    lon=loc.longitude
+                )
+            )
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=503, detail="Error communicating with the Geocoding API.")
+
+
 
 #mock algo route
 @router.post("/tours/generate")
 def generate_tour(tour_data: TourCreate):
+    if len(tour_data.places) <2:
+        raise HTTPException(status_code=400, detail="Cannot generate a tour with less than 2 cities.")
+    try:
+        #res algo = optimize_tour(tour_data.places)
+        #return re
     #Mock tour
     return {
         "distance_total": 45.2,
