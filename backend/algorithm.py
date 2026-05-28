@@ -33,8 +33,8 @@ def build_distance_matrix(places):
     distance_matrix = [[0] * n for _ in range(n)]
     for i in range(n):
         for j in range(i + 1, n):
-            coord_i = (places[i][1], places[i][2])
-            coord_j = (places[j][1], places[j][2])
+            coord_i = (places[i].lat, places[i].lon)
+            coord_j = (places[j].lat, places[j].lon)
             dist = distance(coord_i, coord_j)
             distance_matrix[i][j] = dist
             distance_matrix[j][i] = dist
@@ -107,17 +107,33 @@ def two_opt_swap(tour, distance_matrix):
                     best_tour = True
     return tour
 
+def generate_tour(places):
+    """
+    Generate a tour for a list of places using the nearest neighbor heuristic followed by 2-opt optimization.
+    Parameters:
+        places (list): A list of tuples containing the latitudes and longitudes of the places.
+    Returns:
+        list: A list representing the order of places in the generated tour.
+    """
+    distance_matrix = build_distance_matrix(places)
+    initial_tour = nearest_neighbor_tour(distance_matrix)
+    optimized_tour = two_opt_swap(initial_tour, distance_matrix)
+    ordered_places = [places[i] for i in optimized_tour]
+    total_length = tour_length(optimized_tour, distance_matrix)
+    return { "tour": ordered_places, "length": total_length }
 
-places = [
-    ("A", 0.0, 0.0),
-    ("B", 0.0, 1.0),
-    ("C", 1.0, 1.0),
-    ("D", 1.0, 0.0),
-]
-matrix = build_distance_matrix(places)
-
-bad_tour = [0, 2, 1, 3]
-print("Avant 2-opt :", bad_tour, "longueur =", tour_length(bad_tour, matrix))
-
-fixed = two_opt_swap(bad_tour, matrix)
-print("Après 2-opt :", fixed, "longueur =", tour_length(fixed, matrix))
+if __name__ == "__main__":
+    from models import PlaceSchema
+    
+    places = [
+        PlaceSchema(name="Tokyo",   lat=35.6820172, lon=139.76216),
+        PlaceSchema(name="Kyoto",   lat=34.9946315, lon=135.7344318),
+        PlaceSchema(name="Osaka",   lat=34.6937,    lon=135.5023),
+        PlaceSchema(name="Sapporo", lat=43.0618,    lon=141.3545),
+    ]
+    
+    result = generate_tour(places)
+    print("Distance totale :", result["length"], "km")
+    print("Ordre optimal :")
+    for p in result["tour"]:
+        print(f"  - {p.name}")
