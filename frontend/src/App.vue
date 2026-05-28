@@ -1,11 +1,19 @@
-<script setup lang="ts"></script>
-
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
+  <div id="app">
+    <nav style="margin-bottom: 20px; padding: 10px; background-color: #f0f0f0;">
+      <router-link to="/trip" style="margin-right: 15px;">Voyage</router-link>
+      <router-link to="/login">Connexion</router-link>
+    </nav>
+
+    <router-view />
+  </div>
 </template>
 
-<style scoped></style>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+</style>
