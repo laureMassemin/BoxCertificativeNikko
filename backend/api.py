@@ -25,7 +25,7 @@ def search_place(name: str):
         for loc in locations:
             results.append(
                 Place(
-                    name=loc.adress,
+                    name=loc.address,
                     lat=loc.latitude,
                     lon=loc.longitude
                 )
@@ -42,10 +42,13 @@ def generate_tour(tour_data: TourCreate):
     if len(tour_data.places) <2:
         raise HTTPException(status_code=400, detail="Cannot generate a tour with less than 2 cities.")
     try:
-        #res algo = optimize_tour(tour_data.places)
-        #return re
-    #Mock tour
-    return {
-        "distance_total": 45.2,
-        "optimized_route": tour_data.places
-    }
+        #algo_result = optimize_tour(tour_data.places)
+        #return algo_result
+
+        return {
+            "message" : "Waiting for the algorithm",
+            "total_distance" : 0.0,
+            "optimized_route" : tour_data.places
+        }
+    except Exception as e :
+        raise HTTPException(status_code=500, detail="Internal server error during tour calculation")
