@@ -145,31 +145,59 @@ const updateMap = () => {
   // Places markers (Blue)
   places.value.forEach((place, index) => {
     L.circleMarker([place.lat, place.lon], {
-      radius: 8, fillColor: '#3388ff', color: '#fff', weight: 2, fillOpacity: 1,
-    }).bindPopup(`${index + 1}. ${place.name}`).addTo(markersLayer)
+      radius: 8,
+      fillColor: '#3388ff',
+      color: '#fff',
+      weight: 2,
+      fillOpacity: 1,
+    })
+      .bindPopup(`${index + 1}. ${place.name}`)
+      .addTo(markersLayer)
   })
 
-  // Hotels markers (Red)
-  hotels.value.forEach((hotel, index) => {
-    L.circleMarker([hotel.lat, hotel.lon], {
-      radius: 11, fillColor: '#e74c3c', color: '#fff', weight: 2, fillOpacity: 1,
-    }).bindPopup(`🏨 Hotel ${index + 1}: ${hotel.name}`).addTo(markersLayer)
-  })
+  if (hotels.value.length > 0) {
+    // Hotel markers (Red)
+    hotels.value.forEach((hotel, index) => {
+      L.circleMarker([hotel.lat, hotel.lon], {
+        radius: 11,
+        fillColor: '#e74c3c',
+        color: '#fff',
+        weight: 2,
+        fillOpacity: 1,
+      })
+        .bindPopup(`🏨 Hotel ${index + 1}: ${hotel.name}`)
+        .addTo(markersLayer)
+    })
 
-  // Draw routes
-  const coords = places.value.map((p) => [p.lat, p.lon] as [number, number])
-  coords.push(coords[0]!)
-  polyline = L.polyline(coords, { color: '#3388ff', weight: 2 }).addTo(map)
-
-  if (hotels.value.length > 1) {
+    // Inter-hotel route (red solid)
     const hotelCoords = hotels.value.map((h) => [h.lat, h.lon] as [number, number])
     hotelCoords.push(hotelCoords[0]!)
-    L.polyline(hotelCoords, { color: '#e74c3c', weight: 2, dashArray: '6 4' }).addTo(map)
+    polyline = L.polyline(hotelCoords, { color: '#e74c3c', weight: 2 }).addTo(map)
+
+    // Lines between each place and its hotel (blue dashed)
+    places.value.forEach((place) => {
+      if (place.hotel_id !== null) {
+        const hotel = hotels.value.find((h) => h.id === place.hotel_id)
+        if (hotel) {
+          L.polyline(
+            [
+              [place.lat, place.lon],
+              [hotel.lat, hotel.lon],
+            ],
+            { color: '#3388ff', weight: 1.5, dashArray: '4 4', opacity: 0.6 },
+          ).addTo(map!)
+        }
+      }
+    })
+  } else {
+    // Standard tour — blue route
+    const coords = places.value.map((p) => [p.lat, p.lon] as [number, number])
+    coords.push(coords[0]!)
+    polyline = L.polyline(coords, { color: '#3388ff', weight: 2 }).addTo(map)
   }
 
   map.fitBounds(polyline.getBounds())
 }
-
 // Update map on change
 watch(places, () => updateMap(), { deep: true })
 
@@ -207,7 +235,7 @@ onMounted(async () => {
   try {
     trip.value = await getTrip(Number(tripId))
     const currentUser = getUsername()
-    
+
     if (trip.value) {
       const isOwner = trip.value.owner_username === currentUser
       const isPublic = trip.value.is_public
@@ -219,7 +247,7 @@ onMounted(async () => {
         trip.value = null
         return
       }
-      
+
       // Set data
       places.value = [...trip.value.places]
       hotels.value = [...(trip.value.hotels || [])]

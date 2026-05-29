@@ -4,17 +4,14 @@ from math import cos, sin, acos, radians
 Rearth = 6378.197
 
 
-def distance (Va, Vb):
-    """ 
-    Calculate the optimized round trip from the hotel visiting all places in the group.
-    Computes an optimized tour starting and ending at the hotel, using nearest neighbor + 2-opt.
+def distance(Va, Vb):
+    """
+    Calculate the length of the arc between two points on the surface of the Earth, given their latitudes and longitudes.
     Parameters:
-        hotel (PlaceSchema): The central place serving as the hotel.
-        groupe (list): A list of PlaceSchema objects in the group.
-        distance_matrix_groupe (list): Precomputed distance matrix for the group.
-        hotel_index (int): Index of the hotel in the group/distance matrix.
+        Va (list): A list containing the latitude and longitude of the first point.
+        Vb (list): A list containing the latitude and longitude of the second point.
     Returns:
-        float: The total distance of the optimized round trip in kilometers.
+        float: The length of the arc between the two points in kilometers.
     """
     lat1 = radians(Va[0])
     lon1 = radians(Va[1])
@@ -23,6 +20,7 @@ def distance (Va, Vb):
 
     distance = Rearth * acos(sin(lat1) * sin(lat2) + cos(lat1) * cos(lat2) * cos(lon1 - lon2))
     return distance
+
 
 def personalised_tour_length(places):
     """
@@ -41,13 +39,14 @@ def personalised_tour_length(places):
     total_length += distance((places[-1].lat, places[-1].lon), (places[0].lat, places[0].lon))
     return total_length
 
+
 def build_distance_matrix(places):
     """
     Build a distance matrix for a list of places for remembering the calculated distances without recalculating.
     Parameters:
-        places (list): A list of tuples containing the latitudes and longitudes of the places.
+        places (list): A list of PlaceSchema objects containing lat and lon attributes.
     Returns:
-        list: A list representing the distance matrix.
+        list: A 2D list representing the distance matrix.
     """
     n = len(places)
     distance_matrix = [[0] * n for _ in range(n)]
@@ -60,11 +59,12 @@ def build_distance_matrix(places):
             distance_matrix[j][i] = dist
     return distance_matrix
 
+
 def nearest_neighbor_tour(distance_matrix, start=0):
     """
-    Generate a tour using the nearest neighbor.
+    Generate a tour using the nearest neighbor heuristic from a given starting point.
     Parameters:
-        distance_matrix (list): A list representing the distance matrix.
+        distance_matrix (list): A 2D list representing the distance matrix.
         start (int): The index of the starting place.
     Returns:
         list: A list representing the order of places in the generated tour.
@@ -85,11 +85,12 @@ def nearest_neighbor_tour(distance_matrix, start=0):
         current = next_place
     return tour
 
+
 def best_nearest_neighbor_tour(distance_matrix):
     """
     Try all starting points for the nearest neighbor heuristic and return the best tour found.
     Parameters:
-        distance_matrix (list): A list representing the distance matrix.
+        distance_matrix (list): A 2D list representing the distance matrix.
     Returns:
         list: The best tour found across all starting points.
     """
@@ -104,14 +105,15 @@ def best_nearest_neighbor_tour(distance_matrix):
             best = tour
     return best
 
+
 def tour_length(tour, distance_matrix):
     """
     Calculate the total length of a tour.
     Parameters:
         tour (list): A list representing the order of places in the tour.
-        distance_matrix (list): A list representing the distance matrix.
+        distance_matrix (list): A 2D list representing the distance matrix.
     Returns:
-        float: The total length of the tour.
+        float: The total length of the tour in kilometers.
     """
     total_length = 0
     for i in range(len(tour) - 1):
@@ -119,15 +121,16 @@ def tour_length(tour, distance_matrix):
     total_length += distance_matrix[tour[-1]][tour[0]]
     return total_length
 
+
 def two_opt_swap(tour, distance_matrix):
     """
     Improve a tour by reversing segments that shorten it.
     Stops when no further improvement can be found.
     Parameters:
         tour (list): A list representing the order of places in the tour.
-        distance_matrix (list): A list representing the distance matrix.
+        distance_matrix (list): A 2D list representing the distance matrix.
     Returns:
-        list: A new tour resulting from the 2-opt swap.
+        list: An improved tour resulting from the 2-opt swap.
     """
     n = len(tour)
     improved = True
@@ -149,20 +152,24 @@ def two_opt_swap(tour, distance_matrix):
                 break
     return tour
 
+
 def plan_tour(places):
     """
-    Generate a tour for a list of places using the nearest neighbor heuristic followed by 2-opt optimization.
+    Generate a tour for a list of places using the nearest neighbor heuristic (all starting points) followed by 2-opt optimization.
     Parameters:
-        places (list): A list of tuples containing the latitudes and longitudes of the places.
+        places (list): A list of PlaceSchema objects containing lat and lon attributes.
     Returns:
-        list: A list representing the order of places in the generated tour.
+        dict: A dictionary with keys:
+            - "tour": ordered list of PlaceSchema objects.
+            - "length": total length of the tour in kilometers.
     """
     distance_matrix = build_distance_matrix(places)
     initial_tour = best_nearest_neighbor_tour(distance_matrix)
     optimized_tour = two_opt_swap(initial_tour, distance_matrix)
     ordered_places = [places[i] for i in optimized_tour]
     total_length = tour_length(optimized_tour, distance_matrix)
-    return { "tour": ordered_places, "length": total_length }
+    return {"tour": ordered_places, "length": total_length}
+
 
 def compute_adaptive_threshold(places, percentage=0.15):
     """
@@ -177,28 +184,29 @@ def compute_adaptive_threshold(places, percentage=0.15):
     n = len(places)
     if n < 2:
         return 0
-    
+
     distances = []
     for i in range(n):
         for j in range(i + 1, n):
             coord_i = (places[i].lat, places[i].lon)
             coord_j = (places[j].lat, places[j].lon)
             distances.append(distance(coord_i, coord_j))
-    
+
     distances.sort()
     nb = len(distances)
-    
+
     if nb % 2 == 1:
         mediane = distances[nb // 2]
     else:
         mediane = (distances[nb // 2 - 1] + distances[nb // 2]) / 2
-    
+
     return percentage * mediane
+
 
 def cluster_places(places, distance_max_km=None, percentage=0.15):
     """
     Cluster places based on their geographical proximity using an adaptive distance threshold.
-    Each place is compared to existing clusters, and if it is within the threshold distance of any place in a cluster, it is added to that cluster. 
+    Each place is compared to existing clusters, and if it is within the threshold distance of any place in a cluster, it is added to that cluster.
     Otherwise, a new cluster is created for that place.
     Parameters:
         places (list): A list of PlaceSchema objects representing the places to be clustered.
@@ -209,9 +217,9 @@ def cluster_places(places, distance_max_km=None, percentage=0.15):
     """
     if distance_max_km is None:
         distance_max_km = compute_adaptive_threshold(places, percentage)
-    
+
     groupes = []
-    
+
     for place in places:
         groupe_trouve = None
         for groupe in groupes:
@@ -223,13 +231,14 @@ def cluster_places(places, distance_max_km=None, percentage=0.15):
                     break
             if groupe_trouve is not None:
                 break
-        
+
         if groupe_trouve is not None:
             groupe_trouve.append(place)
         else:
             groupes.append([place])
-    
+
     return groupes
+
 
 def find_central_place(groupe):
     """
@@ -241,10 +250,10 @@ def find_central_place(groupe):
     """
     if len(groupe) == 1:
         return groupe[0]
-    
+
     best_place = None
     best_distance_sum = float('inf')
-    
+
     for candidate in groupe:
         distance_sum = 0
         coord_c = (candidate.lat, candidate.lon)
@@ -252,32 +261,40 @@ def find_central_place(groupe):
             if other is not candidate:
                 coord_o = (other.lat, other.lon)
                 distance_sum += distance(coord_c, coord_o)
-        
+
         if distance_sum < best_distance_sum:
             best_distance_sum = distance_sum
             best_place = candidate
-    
+
     return best_place
+
 
 def calculate_intra_group_distance(hotel, groupe, distance_matrix_groupe, hotel_index):
     """
-    Calculate the total distance of round trips between the hotel and each other place in the group.
-    Each place is visited separately from the hotel (×2 for go + return).
+    Calculate the total distance of individual round trips from the hotel to each place.
+    hotel -> A -> hotel -> B -> hotel -> C -> hotel
+    Places are sorted by distance from the hotel (closest first).
     Parameters:
-        hotel (PlaceSchema): The central place in the group that serves as the hotel.
-        groupe (list): A list of PlaceSchema objects representing the places in the group.
+        hotel (PlaceSchema): The central place serving as the hotel.
+        groupe (list): A list of PlaceSchema objects in the group.
+        distance_matrix_groupe (list): Precomputed distance matrix for the group.
+        hotel_index (int): Index of the hotel in the group/distance matrix.
     Returns:
-        float: The total distance of the round trips in kilometers.
+        tuple: (total_distance, ordered_places) where:
+            - total_distance (float): total round-trip distance in kilometers.
+            - ordered_places (list): ALL places with hotel first, then others sorted by distance.
+                                     e.g. [hotel, closest, ..., farthest]
     """
     if len(groupe) == 1:
-        return 0
-    
-    total = 0
+        return 0, [hotel]
 
-    for i in range(len(groupe)):
-        if i != hotel_index:
-            total += 2 * distance_matrix_groupe[hotel_index][i]
-    return total
+    other_indices = [i for i in range(len(groupe)) if i != hotel_index]
+    other_indices.sort(key=lambda i: distance_matrix_groupe[hotel_index][i])
+
+    total = sum(2 * distance_matrix_groupe[hotel_index][i] for i in other_indices)
+    ordered_places = [hotel] + [groupe[i] for i in other_indices]  # ← hôtel en tête
+
+    return total, ordered_places
 
 
 def plan_tour_with_hotels(places, percentage=0.15):
@@ -287,36 +304,38 @@ def plan_tour_with_hotels(places, percentage=0.15):
     1. Clustering: Group the places into clusters based on their geographical proximity using an adaptive distance threshold.
     2. Hotel Selection: For each cluster, select a central place to serve as the "hotel" for that cluster.
     3. Inter-Hotel TSP: Solve a TSP to determine the optimal order of visiting the hotels.
-    4. Intra-Group Distance Calculation: For each hotel, calculate the total distance of round trips to visit all places in its cluster.
+    4. Intra-Group Distance Calculation: For each hotel, calculate the total distance of individual round trips to visit all places in its cluster (hotel -> A -> hotel -> B -> hotel -> ...).
     Parameters:
         places (list): A list of PlaceSchema objects representing the places to be included in the tour.
         percentage (float): The percentage of the median distance to be used as the threshold for clustering (default is 0.15 for 15%).
     Returns:
         dict: A dictionary containing the following keys:
-            - "etapes": A list of dictionaries, each representing a stage of the tour with   the hotel, the places in its cluster, and the intra-group distance.
-            - "distance_inter": The total distance of the inter-hotel tour.
-            - "distance_intra": The total distance of the intra-group round trips.
-            - "distance_total": The sum of inter-hotel and intra-group distances, representing the total length of the tour.
+            - "etapes": A list of dictionaries, each with:
+                - "hotel": the central PlaceSchema for this stage.
+                - "villes": non-hotel places ordered by distance from the hotel (visit order).
+                - "distance_intra": total round-trip distance for this stage in kilometers.
+            - "distance_inter": The total distance of the inter-hotel tour in kilometers.
+            - "distance_intra": The total intra-group round-trip distance in kilometers.
+            - "distance_total": The sum of inter-hotel and intra-group distances in kilometers.
     """
     if len(places) < 2:
         return {
-            "etapes": [{"hotel": p, "villes": [p], "distance_intra": 0} for p in places],
+            "etapes": [{"hotel": p, "villes": [], "distance_intra": 0} for p in places],
             "distance_inter": 0,
             "distance_intra": 0,
             "distance_total": 0
         }
-    
+
     groupes = cluster_places(places, percentage=percentage)
-    
+
     hotels = []
     groupe_par_hotel_index = {}
     for groupe in groupes:
         hotel = find_central_place(groupe)
         groupe_par_hotel_index[len(hotels)] = groupe
         hotels.append(hotel)
-    
+
     if len(hotels) == 1:
-        hotels_ordonnes = hotels
         ordre_indices = [0]
         distance_inter = 0
     else:
@@ -324,7 +343,7 @@ def plan_tour_with_hotels(places, percentage=0.15):
         initial_tour = best_nearest_neighbor_tour(distance_matrix)
         ordre_indices = two_opt_swap(initial_tour, distance_matrix)
         distance_inter = tour_length(ordre_indices, distance_matrix)
-    
+
     etapes = []
     distance_intra_totale = 0
     for idx_hotel in ordre_indices:
@@ -334,17 +353,118 @@ def plan_tour_with_hotels(places, percentage=0.15):
         dm_groupe = build_distance_matrix(groupe)
         hotel_index = groupe.index(hotel)
 
-        d_intra = calculate_intra_group_distance(hotel, groupe, dm_groupe, hotel_index)
+        d_intra, villes_ordonnees = calculate_intra_group_distance(hotel, groupe, dm_groupe, hotel_index)
         distance_intra_totale += d_intra
         etapes.append({
             "hotel": hotel,
-            "villes": groupe,
+            "villes": villes_ordonnees,
             "distance_intra": d_intra
         })
-    
+
+        tour_complet = []
+        for etape in etapes:
+            tour_complet.extend(etape["villes"])
+
     return {
         "etapes": etapes,
+        "tour_complet": tour_complet,
         "distance_inter": distance_inter,
         "distance_intra": distance_intra_totale,
         "distance_total": distance_inter + distance_intra_totale
     }
+
+
+if __name__ == "__main__":
+    from models import PlaceSchema
+
+    def print_tour_with_hotels(result):
+        for i, etape in enumerate(result['etapes']):
+            noms_villes = [v.name for v in etape['villes']]
+            print(f"  Étape {i+1} : Hôtel = {etape['hotel'].name}")
+            print(f"             Villes = {noms_villes}")
+            print(f"             Aller-retours = {etape['distance_intra']:.2f} km")
+        print(f"  Inter-hôtels  : {result['distance_inter']:.2f} km")
+        print(f"  Aller-retours : {result['distance_intra']:.2f} km")
+        print(f"  TOTAL         : {result['distance_total']:.2f} km")
+
+    test_cases = [
+        {
+            "name": "0 place",
+            "places": []
+        },
+        {
+            "name": "1 place",
+            "places": [
+                PlaceSchema(name="Paris", lat=48.8566, lon=2.3522),
+            ]
+        },
+        {
+            "name": "2 places",
+            "places": [
+                PlaceSchema(name="Paris", lat=48.8566, lon=2.3522),
+                PlaceSchema(name="Lyon",  lat=45.7640, lon=4.8357),
+            ]
+        },
+        {
+            "name": "Alignées (Paris → Lille → Bruxelles)",
+            "places": [
+                PlaceSchema(name="Paris",     lat=48.8566, lon=2.3522),
+                PlaceSchema(name="Lille",     lat=50.6292, lon=3.0573),
+                PlaceSchema(name="Bruxelles", lat=50.8503, lon=4.3517),
+            ]
+        },
+        {
+            "name": "Cluster évident (Paris/Versailles + Lyon/Grenoble)",
+            "places": [
+                PlaceSchema(name="Paris",      lat=48.8566, lon=2.3522),
+                PlaceSchema(name="Versailles", lat=48.8044, lon=2.1204),
+                PlaceSchema(name="Lyon",       lat=45.7640, lon=4.8357),
+                PlaceSchema(name="Grenoble",   lat=45.1885, lon=5.7245),
+            ]
+        },
+        {
+            "name": "Japon (6 villes)",
+            "places": [
+                PlaceSchema(name="Tokyo",   lat=35.6820, lon=139.7621),
+                PlaceSchema(name="Kyoto",   lat=34.9946, lon=135.7344),
+                PlaceSchema(name="Osaka",   lat=34.6937, lon=135.5023),
+                PlaceSchema(name="Sapporo", lat=43.0618, lon=141.3545),
+                PlaceSchema(name="Nikko",   lat=36.7198, lon=139.6982),
+                PlaceSchema(name="Sendai",  lat=38.2682, lon=140.8694),
+            ]
+        },
+        {
+            "name": "Doublons (mêmes coordonnées)",
+            "places": [
+                PlaceSchema(name="Paris A", lat=48.8566, lon=2.3522),
+                PlaceSchema(name="Paris B", lat=48.8566, lon=2.3522),
+                PlaceSchema(name="Lyon",    lat=45.7640, lon=4.8357),
+            ]
+        },
+    ]
+
+    for case in test_cases:
+        print(f"\n{'='*50}")
+        print(f"TEST : {case['name']}")
+        print(f"{'='*50}")
+        places = case["places"]
+
+        if len(places) == 0:
+            print("  (aucune place, rien à calculer)")
+            continue
+
+        print("  --- TSP classique ---")
+        try:
+            tour = plan_tour(places)
+            for place in tour["tour"]:
+                print(f"    {place.name}")
+            print(f"  Total: {tour['length']:.2f} km")
+        except Exception as e:
+            print(f"  ERREUR : {e}")
+
+        print("  --- TSP avec hôtels ---")
+        try:
+            result = plan_tour_with_hotels(places)
+            print_tour_with_hotels(result)
+        except Exception as e:
+            print(f"  ERREUR : {e}")

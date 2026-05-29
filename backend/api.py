@@ -165,8 +165,22 @@ def get_tour(id: int, db: Session = Depends(get_db)):
     tour = db.query(Tour).filter(Tour.id == id).first()
     if not tour:
         raise HTTPException(status_code=404, detail="Tour not found")
-    sorted_places = sorted(tour.places, key=lambda p: p.order)
+    
     hotels = db.query(Hotel).filter(Hotel.tour_id == id).order_by(Hotel.order).all()
+
+    if hotels:
+        # Tour avec hôtels — retourne les places groupées par hôtel dans l'ordre
+        ordered_places = []
+        for hotel in hotels:
+            hotel_places = sorted(
+                [p for p in tour.places if p.hotel_id == hotel.id],
+                key=lambda p: p.order
+            )
+            ordered_places.extend(hotel_places)
+    else:
+        # Tour standard — tri par order global
+        ordered_places = sorted(tour.places, key=lambda p: p.order)
+
     return {
         "id": tour.id,
         "owner_username": tour.owner.username,
@@ -175,7 +189,7 @@ def get_tour(id: int, db: Session = Depends(get_db)):
         "total_distance": tour.total_distance,
         "places": [
             {"id": p.id, "name": p.name, "lat": p.lat, "lon": p.lon, "order": p.order, "hotel_id": p.hotel_id}
-            for p in sorted_places
+            for p in ordered_places
         ],
         "hotels": [
             {"id": h.id, "name": h.name, "lat": h.lat, "lon": h.lon, "order": h.order}
@@ -222,48 +236,53 @@ def generate_tour(tour_data: TourCreate, username: str, db: Session = Depends(ge
     db.commit()
     return {"id": tour.id, "share_token": tour.share_token}
 
-
 @router.post("/tourswithhotels/generate")
 def generate_tour_with_hotels(tour_data: TourCreate, username: str, db: Session = Depends(get_db)):
-    """
-    Generate a tour using the hotel-based clustering algorithm.
-
-    Groups places into geographic clusters, selects a central hotel for each cluster,
-    optimizes the order of hotel visits using TSP, and saves all data to the database.
-
-    Args:
-        tour_data (TourCreate): List of places and visibility setting.
-        username (str): Username of the tour owner.
-        db (Session): SQLAlchemy database session.
-
-    Returns:
-        dict: The ID and share token of the created tour.
-
-    Raises:
-        HTTPException 400: If fewer than 2 places are provided.
-        HTTPException 404: If the user is not found.
-    """
     if len(tour_data.places) < 2:
         raise HTTPException(status_code=400, detail="Cannot generate a tour with less than 2 cities.")
+
     result = plan_tour_with_hotels(tour_data.places)
+
     user = db.query(User).filter(User.username == username).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    tour = Tour(owner_id=user.id, is_public=tour_data.is_public, total_distance=result['distance_total'], share_token=str(uuid.uuid4()))
+
+    tour = Tour(
+        owner_id=user.id,
+        is_public=tour_data.is_public,
+        total_distance=result['distance_total'],
+        share_token=str(uuid.uuid4())
+    )
     db.add(tour)
     db.commit()
     db.refresh(tour)
+
     for hotel_order, etape in enumerate(result['etapes']):
-        hotel = Hotel(tour_id=tour.id, name=etape['hotel'].name, lat=etape['hotel'].lat, lon=etape['hotel'].lon, order=hotel_order)
+        hotel = Hotel(
+            tour_id=tour.id,
+            name=etape['hotel'].name,
+            lat=etape['hotel'].lat,
+            lon=etape['hotel'].lon,
+            order=hotel_order
+        )
         db.add(hotel)
         db.commit()
         db.refresh(hotel)
+
+        # Sauvegarde les villes de l'étape (hotel en tête + villes triées)
         for place_order, p in enumerate(etape['villes']):
-            place = Place(tour_id=tour.id, hotel_id=hotel.id, name=p.name, lat=p.lat, lon=p.lon, order=place_order)
+            place = Place(
+                tour_id=tour.id,
+                hotel_id=hotel.id,
+                name=p.name,
+                lat=p.lat,
+                lon=p.lon,
+                order=place_order  # ordre local dans l'étape
+            )
             db.add(place)
+
     db.commit()
     return {"id": tour.id, "share_token": tour.share_token}
-
 
 @router.get("/tours/user/{username}")
 def get_user_tours(username: str, token: str, db: Session = Depends(get_db)):
