@@ -194,8 +194,9 @@ h2 {
 
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
-import { useRoute } from 'vue-router'
-import { getTripByToken } from '../api'
+import { useRoute, useRouter } from 'vue-router'
+import { getTripByToken, getUsername } from '../api'
+
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -217,6 +218,7 @@ interface Trip {
 }
 
 const route = useRoute()
+const router = useRouter()
 const token = route.params.token as string
 
 const trip = ref<Trip | null>(null)
@@ -256,12 +258,20 @@ const updateMap = () => {
   polyline = L.polyline(coords, { color: 'blue' }).addTo(map)
   map.fitBounds(polyline.getBounds())
 }
-
 onMounted(async () => {
   try {
     trip.value = await getTripByToken(token)
 
     if (trip.value) {
+      // If private, check if user is logged in
+      if (!trip.value.is_public) {
+        const currentUser = getUsername()
+        if (!currentUser) {
+          // Not logged in → redirect to login and come back after
+          router.push(`/login?redirect=/share/${token}`)
+          return
+        }
+      }
       places.value = [...trip.value.places]
       totalDistance.value = trip.value.total_distance.toFixed(2)
     }

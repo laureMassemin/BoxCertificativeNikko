@@ -4,7 +4,6 @@
 
     <p v-if="errorMessage" class="error-msg">{{ errorMessage }}</p>
 
-    <!-- Search -->
     <div class="card">
       <h2>Search Cities</h2>
       <div class="search-row">
@@ -25,7 +24,6 @@
       </ul>
     </div>
 
-    <!-- Selected places -->
     <div class="card">
       <h2>
         My Trip <span class="count">{{ selectedPlaces.length }} cities</span>

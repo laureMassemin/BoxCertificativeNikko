@@ -50,7 +50,9 @@ export default {
     async handleLogin() {
       try {
         await login(this.username, this.password)
-        this.$router.push('/trip')
+        // Redirect to the page they came from, or /trip by default
+        const redirect = this.$route.query.redirect
+        this.$router.push(redirect || '/trip')
       } catch (e) {
         if (e.response?.status === 401) {
           this.error = 'Wrong username or password'

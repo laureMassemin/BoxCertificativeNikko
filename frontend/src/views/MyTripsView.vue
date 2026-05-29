@@ -11,7 +11,6 @@
 
     <div v-else>
       <div v-if="trips.length === 0" class="empty">
-        <p class="empty-icon">🗺</p>
         <p>No trips yet. Create your first one!</p>
       </div>
 

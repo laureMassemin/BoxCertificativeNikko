@@ -4,7 +4,6 @@
     <div v-else-if="error" class="error-msg">{{ error }}</div>
 
     <div v-else>
-      <!-- Stats -->
       <div class="stats-row">
         <div class="stat">
           <div class="stat-value">{{ totalDistance }} km</div>
@@ -20,7 +19,6 @@
         </div>
       </div>
 
-      <!-- Places -->
       <div class="card">
         <h2>Places (in order)</h2>
         <ol class="places-list">
@@ -46,13 +44,11 @@
         </ol>
       </div>
 
-      <!-- Map -->
       <div class="card">
         <h2>Route Map</h2>
         <div ref="mapContainer" class="map-container"></div>
       </div>
 
-      <!-- Share -->
       <div class="share-box">
         <span class="share-label">Share link</span>
         <a :href="`http://localhost:5173/share/${trip?.share_token}`" target="_blank">
@@ -89,7 +85,6 @@ h2 {
   font-size: 0.875rem;
 }
 
-/* Stats */
 .stats-row {
   display: flex;
   gap: 1rem;
