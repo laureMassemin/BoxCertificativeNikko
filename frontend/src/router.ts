@@ -2,27 +2,14 @@ import { createRouter, createWebHistory } from 'vue-router'
 import TripView from './views/TripView.vue'
 import LoginView from './views/LoginView.vue'
 import RegisterView from './views/RegisterView.vue'
+import ToursView from './views/ToursView.vue'
 
 const routes = [
-  {
-    path: '/',
-    redirect: '/trip',
-  },
-  {
-    path: '/trip',
-    name: 'trip',
-    component: TripView,
-  },
-  {
-    path: '/login',
-    name: 'login',
-    component: LoginView,
-  },
-  {
-    path: '/register',
-    name: 'register',
-    component: RegisterView,
-  },
+  { path: '/login', component: LoginView },
+  { path: '/', redirect: '/login' },
+  { path: '/register', component: RegisterView },
+  { path: '/trip', component: TripView },
+  { path: '/trip/:tripId', component: ToursView },
 ]
 
 const router = createRouter({

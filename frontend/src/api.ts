@@ -47,3 +47,11 @@ export function getToken(): string | null {
 export function getUsername(): string | null {
   return localStorage.getItem('username')
 }
+
+export async function generateTour(places: any[], username: string, isPublic: boolean) {
+  const res = await http.post(`/tours/generate?username=${username}`, {
+    is_public: isPublic,
+    places: places,
+  })
+  return res.data
+}

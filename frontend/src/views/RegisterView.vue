@@ -34,7 +34,7 @@ export default {
         await register(this.username, this.password)
         this.$router.push('/login')
       } catch (e) {
-        if (e.response?.status === 400) {
+        if (e.response.status === 400) {
           this.error = 'Username already taken'
         } else {
           this.error = 'An error occurred'

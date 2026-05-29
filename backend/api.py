@@ -67,24 +67,8 @@ def search_place(name: str):
     except Exception as e:
         raise HTTPException(status_code=503, detail="Error communicating with the Geocoding API.")
 
-
-
-#mock algo route
-@router.post("/tours/generate")
-def generate_tour(tour_data: TourCreate):
-    if len(tour_data.places) <2:
-        raise HTTPException(status_code=400, detail="Cannot generate a tour with less than 2 cities.")
-    try:
-        result = plan_tour(tour_data.places)
-
-        return {
-            "total_distance" : result["length"],
-            "optimized_route" : result["tour"]
-        }
-    except Exception as e :
-        raise HTTPException(status_code=500, detail="Internal server error during tour calculation")
     
-@router.get("/tours")
+@router.get("/tours/{id}")
 def search_tours(id: int, db: Session = Depends(get_db)):
     tour = db.query(Tour).filter(Tour.id == id).first()
     if not tour:
@@ -102,3 +86,37 @@ def search_tours(id: int, db: Session = Depends(get_db)):
             for p in sorted_places
         ]
     }
+
+@router.post("/tours/generate")
+def generate_tour(tour_data: TourCreate, username: str, db: Session = Depends(get_db)):
+    '''return the id of the generated tour'''
+    if len(tour_data.places) <2:
+        raise HTTPException(status_code=400, detail="Cannot generate a tour with less than 2 cities.")
+    
+    result = plan_tour(tour_data.places)
+
+    user = db.query(User).filter(User.username ==username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    tour = Tour(owner_id=user.id, is_public = tour_data.is_public, total_distance = result['length'])
+    db.add(tour)
+    db.commit()
+    db.refresh(tour)
+
+    order=0
+    for place in result['tour']:
+        place = Place(tour_id=tour.id, name=place.name, lat=place.lat, lon=place.lon, order=order)
+        db.add(place)
+        order+=1
+    db.commit()
+
+    return {"id": tour.id}
+
+
+
+
+
+
+
+

@@ -7,20 +7,23 @@
     <div v-else-if="error" style="color: red">{{ error }}</div>
 
     <div v-else>
-      <p>Total distance: {{ trip?.total_distance }} km</p>
+      <p>Total distance: {{ totalDistance }} km</p>
       <p>Public: {{ trip?.is_public ? 'Yes' : 'No' }}</p>
 
       <h3>Places (in order)</h3>
       <ol>
-        <li v-for="place in trip?.places" :key="place.id">
-          {{ place.name }} — {{ place.lat }}, {{ place.lon }}
+        <li v-for="(place, index) in places" :key="place.id" style="margin-bottom: 8px">
+          {{ place.name }} : {{ place.lat }}, {{ place.lon }}
+          <button @click="moveUp(index)" :disabled="index === 0">⬆</button>
+          <button @click="moveDown(index)" :disabled="index === places.length - 1">⬇</button>
         </li>
       </ol>
     </div>
   </div>
 </template>
+
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getTrip, getUsername } from '../api'
 
@@ -44,8 +47,31 @@ const route = useRoute()
 const tripId = route.params.tripId as string
 
 const trip = ref<Trip | null>(null)
+const places = ref<Place[]>([])
 const loading = ref(true)
 const error = ref('')
+
+const totalDistance = ref('')
+
+// async function recalculate() {
+//   totalDistance.value = await calculateDistance(places.value)
+// }
+
+async function moveUp(index: number) {
+  if (index === 0) return
+  const tmp = places.value[index - 1]!
+  places.value[index - 1] = places.value[index]!
+  places.value[index] = tmp
+  //await recalculate()
+}
+
+async function moveDown(index: number) {
+  if (index === places.value.length - 1) return
+  const tmp = places.value[index + 1]!
+  places.value[index + 1] = places.value[index]!
+  places.value[index] = tmp
+  //await recalculate()
+}
 onMounted(async () => {
   try {
     trip.value = await getTrip(Number(tripId))
@@ -53,10 +79,13 @@ onMounted(async () => {
     if (trip.value) {
       const isOwner = trip.value.owner_username === currentUser
       const isPublic = trip.value.is_public
+      totalDistance.value = trip.value.total_distance.toFixed(2)
 
       if (!isPublic && !isOwner) {
         error.value = 'You do not have access to this tour'
         trip.value = null
+      } else {
+        places.value = [...trip.value.places]
       }
     }
   } catch (e) {
