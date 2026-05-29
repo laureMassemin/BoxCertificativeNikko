@@ -7,6 +7,7 @@ from passlib.context import CryptContext
 from jose import jwt
 from database import get_db
 from algorithm import (plan_tour)
+import uuid
 
 
 router = APIRouter()
@@ -67,19 +68,18 @@ def search_place(name: str):
     except Exception as e:
         raise HTTPException(status_code=503, detail="Error communicating with the Geocoding API.")
 
-    
 @router.get("/tours/{id}")
-def search_tours(id: int, db: Session = Depends(get_db)):
+def get_tour(id: int, db: Session = Depends(get_db)):
     tour = db.query(Tour).filter(Tour.id == id).first()
     if not tour:
         raise HTTPException(status_code=404, detail="Tour not found")
     
     sorted_places = sorted(tour.places, key=lambda p: p.order)
-    
     return {
         "id": tour.id,
         "owner_username": tour.owner.username,
         "is_public": tour.is_public,
+        "share_token": tour.share_token,  
         "total_distance": tour.total_distance,
         "places": [
             {"id": p.id, "name": p.name, "lat": p.lat, "lon": p.lon, "order": p.order}
@@ -99,7 +99,7 @@ def generate_tour(tour_data: TourCreate, username: str, db: Session = Depends(ge
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    tour = Tour(owner_id=user.id, is_public = tour_data.is_public, total_distance = result['length'])
+    tour = Tour(owner_id=user.id, is_public = tour_data.is_public, total_distance = result['length'],share_token=str(uuid.uuid4()))
     db.add(tour)
     db.commit()
     db.refresh(tour)
@@ -111,7 +111,7 @@ def generate_tour(tour_data: TourCreate, username: str, db: Session = Depends(ge
         order+=1
     db.commit()
 
-    return {"id": tour.id}
+    return {"id": tour.id, "share_token": tour.share_token}
 @router.get("/tours/user/{username}")
 def get_user_tours(username: str, token: str, db: Session = Depends(get_db)):
     
@@ -145,3 +145,22 @@ def calculate_distance(places: List[PlaceSchema]):
     from algorithm import personalised_tour_length
     total = personalised_tour_length(places)
     return {"total_distance": round(total, 2)}
+
+
+@router.get("/tours/share/{token}")
+def get_tour_by_token(token: str, db: Session = Depends(get_db)):
+    tour = db.query(Tour).filter(Tour.share_token == token).first()
+    if not tour:
+        raise HTTPException(status_code=404, detail="Tour not found")
+    sorted_places = sorted(tour.places, key=lambda p: p.order)
+    return {
+        "id": tour.id,
+        "owner_username": tour.owner.username,
+        "is_public": tour.is_public,
+        "share_token": tour.share_token,
+        "total_distance": tour.total_distance,
+        "places": [
+            {"id": p.id, "name": p.name, "lat": p.lat, "lon": p.lon, "order": p.order}
+            for p in sorted_places
+        ]
+    }

@@ -18,6 +18,12 @@
           <button @click="moveDown(index)" :disabled="index === places.length - 1">⬇</button>
         </li>
       </ol>
+      <p>
+        Share link:
+        <a :href="`http://localhost:5173/share/${trip?.share_token}`">
+          {{ trip?.share_token }}
+        </a>
+      </p>
     </div>
   </div>
 </template>
@@ -34,12 +40,12 @@ interface Place {
   lon: number
   order: number
 }
-
 interface Trip {
   id: number
   owner_username: string
   is_public: boolean
   total_distance: number
+  share_token: string // ← ajoute ça
   places: Place[]
 }
 
@@ -52,6 +58,7 @@ const loading = ref(true)
 const error = ref('')
 
 const totalDistance = ref('')
+
 async function recalculate() {
   console.log('Sending places:', JSON.stringify(places.value))
   const result = await calculateDistance(places.value)

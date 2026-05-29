@@ -68,3 +68,8 @@ export async function calculateDistance(places: any[]) {
   const res = await http.post('/distance', places)
   return res.data.total_distance
 }
+
+export async function getTripByToken(token: string) {
+  const res = await http.get(`/tours/share/${token}`)
+  return res.data
+}

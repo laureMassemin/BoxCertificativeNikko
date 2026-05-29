@@ -19,6 +19,13 @@ const selectedPlaces = ref<Place[]>([])
 const errorMessage = ref('')
 const tourResult = ref<any>(null)
 
+const isPublic = ref(false)
+
+const generateTour = async () => {
+  const result = await apiGenerateTour(selectedPlaces.value, getUsername()!, isPublic.value)
+  router.push(`/trip/${result.id}`)
+}
+
 // Fetch city coordinates from backend
 const searchCity = async () => {
   errorMessage.value = ''
@@ -45,16 +52,6 @@ const addPlaceToTrip = (place: Place) => {
 // Remove city from trip
 const removePlace = (index: number) => {
   selectedPlaces.value.splice(index, 1)
-}
-
-const generateTour = async () => {
-  errorMessage.value = ''
-  try {
-    const result = await apiGenerateTour(selectedPlaces.value, getUsername()!, false)
-    router.push(`trip/${result.id}`)
-  } catch (error) {
-    errorMessage.value = 'Communication error with the server.'
-  }
 }
 </script>
 
@@ -91,6 +88,10 @@ const generateTour = async () => {
         </li>
       </ol>
 
+      <label>
+        <input type="checkbox" v-model="isPublic" />
+        Make this trip public
+      </label>
       <button
         v-if="selectedPlaces.length >= 2"
         @click="generateTour"

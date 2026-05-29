@@ -4,6 +4,7 @@ import LoginView from './views/LoginView.vue'
 import RegisterView from './views/RegisterView.vue'
 import ToursView from './views/ToursView.vue'
 import MyTripsView from './views/MyTripsView.vue'
+import SharedView from './views/SharedView.vue'
 
 const routes = [
   { path: '/login', component: LoginView },
@@ -12,6 +13,7 @@ const routes = [
   { path: '/trip', component: TripView, meta: { requiresAuth: true } },
   { path: '/trip/:tripId', component: ToursView },
   { path: '/my-trips', component: MyTripsView, meta: { requiresAuth: true } },
+  { path: '/share/:token', component: SharedView },
 ]
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),

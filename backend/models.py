@@ -27,6 +27,7 @@ class Tour(Base):
     owner_id        = Column(Integer, ForeignKey("users.id"), nullable=False)
     is_public       = Column(Boolean, default=False)
     total_distance  = Column(Float, default=0.0)
+    share_token = Column(String, unique=True)
 
     owner = relationship("User", back_populates="tours")
     places = relationship("Place", back_populates="tour")
