@@ -23,11 +23,12 @@ const tourResult = ref<any>(null)
 
 const isPublic = ref(false)
 
-// --- AJOUTS POUR LA CARTE ---
+//Dynamic map
 const mapContainer = ref(null)
 let map: L.Map | null = null
 let markersLayer = L.layerGroup()
 
+// Update markers on the map
 const updateMapMarkers = () => {
   if (!map) return
   markersLayer.clearLayers()
@@ -36,11 +37,11 @@ const updateMapMarkers = () => {
     markersLayer.addLayer(marker)
   })
 }
-
+// Update the map when selected places change
 watch(selectedPlaces, () => {
   updateMapMarkers()
 }, { deep: true })
-
+// Create map when the page load
 onMounted(() => {
   if (mapContainer.value) {
     map = L.map(mapContainer.value).setView([46.603354, 1.888334], 5)
@@ -48,7 +49,6 @@ onMounted(() => {
     markersLayer.addTo(map)
   }
 })
-// --- FIN DES AJOUTS CARTE ---
 
 const generateTour = async () => {
   const result = await apiGenerateTour(selectedPlaces.value, getUsername()!, isPublic.value)
