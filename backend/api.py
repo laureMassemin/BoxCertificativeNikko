@@ -108,29 +108,25 @@ def search_place(name: str):
     except Exception:
         raise HTTPException(status_code=503, detail="Error communicating with the Geocoding API.")
 
-
 @router.get("/tours/share/{token}")
 def get_tour_by_token(token: str, db: Session = Depends(get_db)):
-    """
-    Retrieve a tour by its unique share token.
-
-    This endpoint is public — no authentication required.
-    Used for sharing tours via a URL.
-
-    Args:
-        token (str): The UUID share token associated with the tour.
-        db (Session): SQLAlchemy database session.
-
-    Returns:
-        dict: Tour details including places ordered by their index.
-
-    Raises:
-        HTTPException 404: If no tour matches the given token.
-    """
     tour = db.query(Tour).filter(Tour.share_token == token).first()
     if not tour:
         raise HTTPException(status_code=404, detail="Tour not found")
-    sorted_places = sorted(tour.places, key=lambda p: p.order)
+
+    hotels = db.query(Hotel).filter(Hotel.tour_id == tour.id).order_by(Hotel.order).all()
+
+    if hotels:
+        ordered_places = []
+        for hotel in hotels:
+            hotel_places = sorted(
+                [p for p in tour.places if p.hotel_id == hotel.id],
+                key=lambda p: p.order
+            )
+            ordered_places.extend(hotel_places)
+    else:
+        ordered_places = sorted(tour.places, key=lambda p: p.order)
+
     return {
         "id": tour.id,
         "owner_username": tour.owner.username,
@@ -138,12 +134,14 @@ def get_tour_by_token(token: str, db: Session = Depends(get_db)):
         "share_token": tour.share_token,
         "total_distance": tour.total_distance,
         "places": [
-            {"id": p.id, "name": p.name, "lat": p.lat, "lon": p.lon, "order": p.order}
-            for p in sorted_places
+            {"id": p.id, "name": p.name, "lat": p.lat, "lon": p.lon, "order": p.order, "hotel_id": p.hotel_id}
+            for p in ordered_places
+        ],
+        "hotels": [
+            {"id": h.id, "name": h.name, "lat": h.lat, "lon": h.lon, "order": h.order}
+            for h in hotels
         ]
     }
-
-
 @router.get("/tours/{id}")
 def get_tour(id: int, db: Session = Depends(get_db)):
     """

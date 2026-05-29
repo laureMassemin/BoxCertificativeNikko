@@ -37,6 +37,21 @@
         </ol>
       </div>
 
+      <div class="card" v-if="hotels.length > 0">
+        <h2>🏨 Hotel Stops (in order)</h2>
+        <ol class="places-list">
+          <li v-for="(hotel, index) in hotels" :key="hotel.id" class="place-item hotel-item">
+            <span class="place-num hotel-num">{{ index + 1 }}</span>
+            <div class="place-info">
+              <span class="place-name">{{ hotel.name }}</span>
+              <span class="place-coords"
+                >{{ hotel.lat.toFixed(4) }}, {{ hotel.lon.toFixed(4) }}</span
+              >
+            </div>
+          </li>
+        </ol>
+      </div>
+
       <div class="card">
         <h2>Route Map</h2>
         <div ref="mapContainer" class="map-container"></div>
@@ -44,6 +59,147 @@
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { ref, onMounted, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { getTripByToken, getUsername } from '../api'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+
+interface Place {
+  id: number
+  name: string
+  lat: number
+  lon: number
+  order: number
+  hotel_id: number | null
+}
+
+interface Hotel {
+  id: number
+  name: string
+  lat: number
+  lon: number
+  order: number
+}
+
+interface Trip {
+  id: number
+  owner_username: string
+  is_public: boolean
+  total_distance: number
+  share_token: string
+  places: Place[]
+  hotels: Hotel[]
+}
+
+const route = useRoute()
+const router = useRouter()
+const token = route.params.token as string
+
+const trip = ref<Trip | null>(null)
+const places = ref<Place[]>([])
+const hotels = ref<Hotel[]>([])
+const loading = ref(true)
+const error = ref('')
+const totalDistance = ref('')
+
+const mapContainer = ref(null)
+let map: L.Map | null = null
+let markersLayer = L.layerGroup()
+let polyline: L.Polyline | null = null
+
+const updateMap = () => {
+  if (!map) return
+  markersLayer.clearLayers()
+  if (polyline) map.removeLayer(polyline)
+  if (places.value.length === 0) return
+
+  places.value.forEach((place, index) => {
+    L.circleMarker([place.lat, place.lon], {
+      radius: 8,
+      fillColor: '#3388ff',
+      color: '#fff',
+      weight: 2,
+      fillOpacity: 1,
+    })
+      .bindPopup(`${index + 1}. ${place.name}`)
+      .addTo(markersLayer)
+  })
+
+  if (hotels.value.length > 0) {
+    hotels.value.forEach((hotel, index) => {
+      L.circleMarker([hotel.lat, hotel.lon], {
+        radius: 11,
+        fillColor: '#e74c3c',
+        color: '#fff',
+        weight: 2,
+        fillOpacity: 1,
+      })
+        .bindPopup(`🏨 Hotel ${index + 1}: ${hotel.name}`)
+        .addTo(markersLayer)
+    })
+
+    const hotelCoords = hotels.value.map((h) => [h.lat, h.lon] as [number, number])
+    hotelCoords.push(hotelCoords[0]!)
+    polyline = L.polyline(hotelCoords, { color: '#e74c3c', weight: 2 }).addTo(map)
+
+    places.value.forEach((place) => {
+      if (place.hotel_id !== null) {
+        const hotel = hotels.value.find((h) => h.id === place.hotel_id)
+        if (hotel) {
+          L.polyline(
+            [
+              [place.lat, place.lon],
+              [hotel.lat, hotel.lon],
+            ],
+            { color: '#3388ff', weight: 1.5, dashArray: '4 4', opacity: 0.6 },
+          ).addTo(map!)
+        }
+      }
+    })
+  } else {
+    const coords = places.value.map((p) => [p.lat, p.lon] as [number, number])
+    coords.push(coords[0]!)
+    polyline = L.polyline(coords, { color: '#3388ff', weight: 2 }).addTo(map)
+  }
+
+  map.fitBounds(polyline.getBounds())
+}
+
+onMounted(async () => {
+  try {
+    trip.value = await getTripByToken(token)
+
+    if (trip.value) {
+      if (!trip.value.is_public) {
+        const currentUser = getUsername()
+        if (!currentUser) {
+          router.push(`/login?redirect=/share/${token}`)
+          return
+        }
+      }
+      places.value = [...trip.value.places]
+      hotels.value = [...(trip.value.hotels || [])]
+      totalDistance.value = trip.value.total_distance.toFixed(2)
+    }
+  } catch (e) {
+    error.value = 'Trip not found'
+  } finally {
+    loading.value = false
+  }
+
+  await nextTick()
+
+  if (mapContainer.value) {
+    map = L.map(mapContainer.value).setView([46.603354, 1.888334], 5)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
+    markersLayer.addTo(map)
+    updateMap()
+  }
+})
+</script>
 
 <style scoped>
 .shared-page {
@@ -152,6 +308,11 @@ h2 {
   padding: 0.625rem 0.875rem;
 }
 
+.hotel-item {
+  background: #fff9f9;
+  border-color: #fde8e8;
+}
+
 .place-num {
   width: 24px;
   height: 24px;
@@ -164,6 +325,10 @@ h2 {
   font-size: 0.7rem;
   font-weight: 600;
   flex-shrink: 0;
+}
+
+.hotel-num {
+  background: #e74c3c;
 }
 
 .place-info {
@@ -191,119 +356,3 @@ h2 {
   border: 1px solid #eee;
 }
 </style>
-
-<script setup lang="ts">
-// Import tools
-import { ref, onMounted, nextTick } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { getTripByToken, getUsername } from '../api'
-
-// Import map
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
-
-// Define data types
-interface Place {
-  id: number
-  name: string
-  lat: number
-  lon: number
-  order: number
-}
-
-interface Trip {
-  id: number
-  owner_username: string
-  is_public: boolean
-  total_distance: number
-  share_token: string
-  places: Place[]
-}
-
-// Setup routing
-const route = useRoute()
-const router = useRouter()
-const token = route.params.token as string
-
-// State variables
-const trip = ref<Trip | null>(null)
-const places = ref<Place[]>([])
-const loading = ref(true)
-const error = ref('')
-const totalDistance = ref('')
-
-// Map variables
-const mapContainer = ref(null)
-let map: L.Map | null = null
-let markersLayer = L.layerGroup()
-let polyline: L.Polyline | null = null
-
-// Redraw map content
-const updateMap = () => {
-  if (!map) return
-
-  markersLayer.clearLayers()
-  if (polyline) map.removeLayer(polyline)
-  if (places.value.length === 0) return
-
-  // Add city markers
-  places.value.forEach((place, index) => {
-    L.circleMarker([place.lat, place.lon], {
-      radius: 8,
-      fillColor: '#3388ff',
-      color: '#fff',
-      weight: 2,
-      fillOpacity: 1,
-    })
-      .bindPopup(`${index + 1}. ${place.name}`)
-      .addTo(markersLayer)
-  })
-
-  // Draw route line
-  const coords = places.value.map((p) => [p.lat, p.lon] as [number, number])
-  coords.push(coords[0]!)
-  polyline = L.polyline(coords, { color: 'blue' }).addTo(map)
-  map.fitBounds(polyline.getBounds())
-}
-
-// Run on load
-onMounted(async () => {
-  try {
-    trip.value = await getTripByToken(token)
-
-    if (trip.value) {
-      // Check privacy access
-      if (!trip.value.is_public) {
-        const currentUser = getUsername()
-        
-        // Require login
-        if (!currentUser) {
-          router.push(`/login?redirect=/share/${token}`)
-          return
-        }
-      }
-      
-      // Set trip data
-      places.value = [...trip.value.places]
-      totalDistance.value = trip.value.total_distance.toFixed(2)
-    }
-  } catch (e) {
-    // Handle errors
-    error.value = 'Trip not found'
-  } finally {
-    // Stop loading
-    loading.value = false
-  }
-
-  // Wait for DOM
-  await nextTick()
-
-  // Initialize map
-  if (mapContainer.value) {
-    map = L.map(mapContainer.value).setView([46.603354, 1.888334], 5)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
-    markersLayer.addTo(map)
-    updateMap()
-  }
-})
-</script>
