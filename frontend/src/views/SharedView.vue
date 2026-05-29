@@ -193,13 +193,16 @@ h2 {
 </style>
 
 <script setup lang="ts">
+// Import tools
 import { ref, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getTripByToken, getUsername } from '../api'
 
+// Import map
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
+// Define data types
 interface Place {
   id: number
   name: string
@@ -217,21 +220,25 @@ interface Trip {
   places: Place[]
 }
 
+// Setup routing
 const route = useRoute()
 const router = useRouter()
 const token = route.params.token as string
 
+// State variables
 const trip = ref<Trip | null>(null)
 const places = ref<Place[]>([])
 const loading = ref(true)
 const error = ref('')
 const totalDistance = ref('')
 
+// Map variables
 const mapContainer = ref(null)
 let map: L.Map | null = null
 let markersLayer = L.layerGroup()
 let polyline: L.Polyline | null = null
 
+// Redraw map content
 const updateMap = () => {
   if (!map) return
 
@@ -239,7 +246,7 @@ const updateMap = () => {
   if (polyline) map.removeLayer(polyline)
   if (places.value.length === 0) return
 
-  // Add circle markers
+  // Add city markers
   places.value.forEach((place, index) => {
     L.circleMarker([place.lat, place.lon], {
       radius: 8,
@@ -252,37 +259,46 @@ const updateMap = () => {
       .addTo(markersLayer)
   })
 
-  // Draw route including return to start
+  // Draw route line
   const coords = places.value.map((p) => [p.lat, p.lon] as [number, number])
   coords.push(coords[0]!)
   polyline = L.polyline(coords, { color: 'blue' }).addTo(map)
   map.fitBounds(polyline.getBounds())
 }
+
+// Run on load
 onMounted(async () => {
   try {
     trip.value = await getTripByToken(token)
 
     if (trip.value) {
-      // If private, check if user is logged in
+      // Check privacy access
       if (!trip.value.is_public) {
         const currentUser = getUsername()
+        
+        // Require login
         if (!currentUser) {
-          // Not logged in → redirect to login and come back after
           router.push(`/login?redirect=/share/${token}`)
           return
         }
       }
+      
+      // Set trip data
       places.value = [...trip.value.places]
       totalDistance.value = trip.value.total_distance.toFixed(2)
     }
   } catch (e) {
+    // Handle errors
     error.value = 'Trip not found'
   } finally {
+    // Stop loading
     loading.value = false
   }
 
+  // Wait for DOM
   await nextTick()
 
+  // Initialize map
   if (mapContainer.value) {
     map = L.map(mapContainer.value).setView([46.603354, 1.888334], 5)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)

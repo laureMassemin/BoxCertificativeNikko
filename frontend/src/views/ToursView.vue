@@ -80,12 +80,16 @@
 </template>
 
 <script setup lang="ts">
+// Import tools
 import { ref, onMounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { getTrip, getUsername, calculateDistance, updateTourPlaces } from '../api'
+
+// Import map
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
+// Define data types
 interface Place {
   id: number
   name: string
@@ -113,9 +117,11 @@ interface Trip {
   hotels: Hotel[]
 }
 
+// Setup routing
 const route = useRoute()
 const tripId = route.params.tripId as string
 
+// State variables
 const trip = ref<Trip | null>(null)
 const places = ref<Place[]>([])
 const hotels = ref<Hotel[]>([])
@@ -123,49 +129,38 @@ const loading = ref(true)
 const error = ref('')
 const totalDistance = ref('')
 
+// Map variables
 const mapContainer = ref(null)
 let map: L.Map | null = null
 let markersLayer = L.layerGroup()
 let polyline: L.Polyline | null = null
 
+// Redraw map
 const updateMap = () => {
   if (!map) return
   markersLayer.clearLayers()
   if (polyline) map.removeLayer(polyline)
   if (places.value.length === 0) return
 
-  // Blue markers for places
+  // Places markers (Blue)
   places.value.forEach((place, index) => {
     L.circleMarker([place.lat, place.lon], {
-      radius: 8,
-      fillColor: '#3388ff',
-      color: '#fff',
-      weight: 2,
-      fillOpacity: 1,
-    })
-      .bindPopup(`${index + 1}. ${place.name}`)
-      .addTo(markersLayer)
+      radius: 8, fillColor: '#3388ff', color: '#fff', weight: 2, fillOpacity: 1,
+    }).bindPopup(`${index + 1}. ${place.name}`).addTo(markersLayer)
   })
 
-  // Red markers for hotels
+  // Hotels markers (Red)
   hotels.value.forEach((hotel, index) => {
     L.circleMarker([hotel.lat, hotel.lon], {
-      radius: 11,
-      fillColor: '#e74c3c',
-      color: '#fff',
-      weight: 2,
-      fillOpacity: 1,
-    })
-      .bindPopup(`🏨 Hotel ${index + 1}: ${hotel.name}`)
-      .addTo(markersLayer)
+      radius: 11, fillColor: '#e74c3c', color: '#fff', weight: 2, fillOpacity: 1,
+    }).bindPopup(`🏨 Hotel ${index + 1}: ${hotel.name}`).addTo(markersLayer)
   })
 
-  // Route line
+  // Draw routes
   const coords = places.value.map((p) => [p.lat, p.lon] as [number, number])
   coords.push(coords[0]!)
   polyline = L.polyline(coords, { color: '#3388ff', weight: 2 }).addTo(map)
 
-  // Hotel route line if hotels exist
   if (hotels.value.length > 1) {
     const hotelCoords = hotels.value.map((h) => [h.lat, h.lon] as [number, number])
     hotelCoords.push(hotelCoords[0]!)
@@ -175,20 +170,17 @@ const updateMap = () => {
   map.fitBounds(polyline.getBounds())
 }
 
-watch(
-  places,
-  () => {
-    updateMap()
-  },
-  { deep: true },
-)
+// Update map on change
+watch(places, () => updateMap(), { deep: true })
 
+// Update distance & save
 async function recalculate() {
   const result = await calculateDistance(places.value)
   totalDistance.value = result.toFixed(2)
   await updateTourPlaces(Number(tripId), places.value)
 }
 
+// Move city up
 async function moveUp(index: number) {
   if (index === 0) return
   const newPlaces = [...places.value]
@@ -199,6 +191,7 @@ async function moveUp(index: number) {
   await recalculate()
 }
 
+// Move city down
 async function moveDown(index: number) {
   if (index === places.value.length - 1) return
   const newPlaces = [...places.value]
@@ -209,31 +202,40 @@ async function moveDown(index: number) {
   await recalculate()
 }
 
+// Run on load
 onMounted(async () => {
   try {
     trip.value = await getTrip(Number(tripId))
     const currentUser = getUsername()
+    
     if (trip.value) {
       const isOwner = trip.value.owner_username === currentUser
       const isPublic = trip.value.is_public
       totalDistance.value = trip.value.total_distance.toFixed(2)
 
+      // Check access
       if (!isPublic && !isOwner) {
         error.value = 'You do not have access to this tour'
         trip.value = null
         return
       }
+      
+      // Set data
       places.value = [...trip.value.places]
       hotels.value = [...(trip.value.hotels || [])]
     }
   } catch (e) {
+    // Handle errors
     error.value = 'Trip not found'
   } finally {
+    // Stop loading
     loading.value = false
   }
 
+  // Wait for DOM
   await nextTick()
 
+  // Initialize map
   if (mapContainer.value) {
     map = L.map(mapContainer.value).setView([46.603354, 1.888334], 5)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)

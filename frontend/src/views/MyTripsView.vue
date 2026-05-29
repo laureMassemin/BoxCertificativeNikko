@@ -41,12 +41,14 @@
 </template>
 
 <script setup lang="ts">
+// Import tools
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getUserTours, getUsername } from '../api'
 
 const router = useRouter()
 
+// Define trip data
 interface TripSummary {
   id: number
   total_distance: number
@@ -54,26 +56,33 @@ interface TripSummary {
   places_count: number
 }
 
+// State variables
 const trips = ref<TripSummary[]>([])
 const loading = ref(true)
 const error = ref('')
 
+// Run on page load
 onMounted(async () => {
   try {
     const username = getUsername()
+    
+    // Check login status
     if (!username) {
       router.push('/login')
       return
     }
+    
+    // Fetch user trips
     trips.value = await getUserTours(username)
   } catch (e) {
+    // Handle errors
     error.value = 'Could not load your trips'
   } finally {
+    // Stop loading
     loading.value = false
   }
 })
 </script>
-
 <style scoped>
 .my-trips-page {
   max-width: 760px;

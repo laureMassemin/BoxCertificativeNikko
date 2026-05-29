@@ -43,15 +43,20 @@
 import { register } from '../api.ts'
 
 export default {
+  // Init state
   data() {
     return { username: '', password: '', error: '' }
   },
   methods: {
+    // Handle signup
     async handleRegister() {
       try {
         await register(this.username, this.password)
+        
+        // Go to login
         this.$router.push('/login')
       } catch (e) {
+        // Show error message
         if (e.response.status === 400) {
           this.error = 'Username already taken'
         } else {

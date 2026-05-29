@@ -66,6 +66,7 @@
 </template>
 
 <script setup lang="ts">
+// Import tools & map
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { generateTour as apiGenerateTour, getUsername, generateTourWithHotels } from '../api'
@@ -74,12 +75,14 @@ import 'leaflet/dist/leaflet.css'
 
 const router = useRouter()
 
+// Define data types
 interface Place {
   name: string
   lat: number
   lon: number
 }
 
+// State variables
 const searchQuery = ref('')
 const searchResults = ref<Place[]>([])
 const selectedPlaces = ref<Place[]>([])
@@ -87,10 +90,12 @@ const errorMessage = ref('')
 const tourResult = ref<any>(null)
 const isPublic = ref(false)
 
+// Map variables
 const mapContainer = ref(null)
 let map: L.Map | null = null
 let markersLayer = L.layerGroup()
 
+// Generate tour with hotels
 const generateTourHotels = async () => {
   errorMessage.value = ''
   try {
@@ -105,6 +110,7 @@ const generateTourHotels = async () => {
   }
 }
 
+// Redraw map markers
 const updateMapMarkers = () => {
   if (!map) return
   markersLayer.clearLayers()
@@ -121,6 +127,7 @@ const updateMapMarkers = () => {
   })
 }
 
+// Update map on change
 watch(
   selectedPlaces,
   () => {
@@ -129,6 +136,7 @@ watch(
   { deep: true },
 )
 
+// Initialize map on load
 onMounted(() => {
   if (mapContainer.value) {
     map = L.map(mapContainer.value).setView([46.603354, 1.888334], 5)
@@ -137,11 +145,13 @@ onMounted(() => {
   }
 })
 
+// Generate standard tour
 const generateTour = async () => {
   const result = await apiGenerateTour(selectedPlaces.value, getUsername()!, isPublic.value)
   router.push(`/trip/${result.id}`)
 }
 
+// Search for cities
 const searchCity = async () => {
   errorMessage.value = ''
   try {
@@ -149,11 +159,13 @@ const searchCity = async () => {
     if (!response.ok) throw new Error('City not found')
     searchResults.value = await response.json()
   } catch {
+    // Handle search error
     errorMessage.value = 'Unable to find this city.'
     searchResults.value = []
   }
 }
 
+// Add city to list
 const addPlaceToTrip = (place: Place) => {
   if (!selectedPlaces.value.find((p) => p.name === place.name)) {
     selectedPlaces.value.push(place)
@@ -162,6 +174,7 @@ const addPlaceToTrip = (place: Place) => {
   searchQuery.value = ''
 }
 
+// Remove city from list
 const removePlace = (index: number) => {
   selectedPlaces.value.splice(index, 1)
 }
