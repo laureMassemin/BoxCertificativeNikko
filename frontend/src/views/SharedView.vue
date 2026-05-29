@@ -17,14 +17,21 @@
           {{ place.name }} : {{ place.lat }}, {{ place.lon }}
         </li>
       </ol>
+
+      <div
+        ref="mapContainer"
+        style="height: 400px; width: 100%; border: 2px solid black; margin: 15px 0"
+      ></div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
-import { getTripByToken, getUsername } from '../api'
+import { getTripByToken } from '../api'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 
 interface Place {
   id: number
@@ -52,6 +59,38 @@ const loading = ref(true)
 const error = ref('')
 const totalDistance = ref('')
 
+const mapContainer = ref(null)
+let map: L.Map | null = null
+let markersLayer = L.layerGroup()
+let polyline: L.Polyline | null = null
+
+const updateMap = () => {
+  if (!map) return
+
+  markersLayer.clearLayers()
+  if (polyline) map.removeLayer(polyline)
+  if (places.value.length === 0) return
+
+  // Add circle markers
+  places.value.forEach((place, index) => {
+    L.circleMarker([place.lat, place.lon], {
+      radius: 8,
+      fillColor: '#3388ff',
+      color: '#fff',
+      weight: 2,
+      fillOpacity: 1,
+    })
+      .bindPopup(`${index + 1}. ${place.name}`)
+      .addTo(markersLayer)
+  })
+
+  // Draw route including return to start
+  const coords = places.value.map((p) => [p.lat, p.lon] as [number, number])
+  coords.push(coords[0]!)
+  polyline = L.polyline(coords, { color: 'blue' }).addTo(map)
+  map.fitBounds(polyline.getBounds())
+}
+
 onMounted(async () => {
   try {
     trip.value = await getTripByToken(token)
@@ -64,6 +103,15 @@ onMounted(async () => {
     error.value = 'Trip not found'
   } finally {
     loading.value = false
+  }
+
+  await nextTick()
+
+  if (mapContainer.value) {
+    map = L.map(mapContainer.value).setView([46.603354, 1.888334], 5)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
+    markersLayer.addTo(map)
+    updateMap()
   }
 })
 </script>
