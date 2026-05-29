@@ -5,12 +5,6 @@ from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from database import Base
 
-# 1. Vue envoie        → { username: "hubert", password: "1234" }
-# 2. Pydantic vérifie  → les données sont valides et crée un objet UserLogin
-# 3. SQLAlchemy cherche → SELECT * FROM users WHERE username = "hubert"
-# 4. FastAPI répond    → { token: "eyJ..." }
-# 5. Vue reçoit        → redirige vers /trip
-
 class User(Base):
     """Represents a user account in the database"""
     __tablename__ = "users"
@@ -41,7 +35,7 @@ class Hotel(Base):
     name    = Column(String, nullable=False)
     lat     = Column(Float, nullable=False)
     lon     = Column(Float, nullable=False)
-    order   = Column(Integer, nullable=False)  # order in the inter-hotel tour
+    order   = Column(Integer, nullable=False)  
 
     places  = relationship("Place", back_populates="hotel")
 
@@ -50,7 +44,7 @@ class Place(Base):
     __tablename__ = "places"
     id       = Column(Integer, primary_key=True, index=True)
     tour_id  = Column(Integer, ForeignKey("tours.id"), nullable=False)
-    hotel_id = Column(Integer, ForeignKey("hotels.id"), nullable=True)  # nullable for normal tours
+    hotel_id = Column(Integer, ForeignKey("hotels.id"), nullable=True) 
     name     = Column(String, nullable=False)
     lat      = Column(Float, nullable=False)
     lon      = Column(Float, nullable=False)
@@ -59,20 +53,17 @@ class Place(Base):
     tour  = relationship("Tour", back_populates="places")
     hotel = relationship("Hotel", back_populates="places")
 
-#Login
 class UserLogin(BaseModel):
     """Schema for login and register requests"""
     username: str
     password: str
 
-#Place
 class PlaceSchema(BaseModel):
     """Schema for a place sent by the frontend"""
     name: str
     lat: float
     lon: float
 
-#Tour
 class TourCreate(BaseModel):
     """Schema for creating a new trip"""
     is_public: bool
