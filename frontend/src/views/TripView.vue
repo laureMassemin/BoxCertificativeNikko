@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { generateTour as apiGenerateTour, getUsername } from '../api'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 
 const router = useRouter()
 
@@ -20,6 +22,33 @@ const errorMessage = ref('')
 const tourResult = ref<any>(null)
 
 const isPublic = ref(false)
+
+// --- AJOUTS POUR LA CARTE ---
+const mapContainer = ref(null)
+let map: L.Map | null = null
+let markersLayer = L.layerGroup()
+
+const updateMapMarkers = () => {
+  if (!map) return
+  markersLayer.clearLayers()
+  selectedPlaces.value.forEach(place => {
+    const marker = L.marker([place.lat, place.lon]).bindPopup(place.name)
+    markersLayer.addLayer(marker)
+  })
+}
+
+watch(selectedPlaces, () => {
+  updateMapMarkers()
+}, { deep: true })
+
+onMounted(() => {
+  if (mapContainer.value) {
+    map = L.map(mapContainer.value).setView([46.603354, 1.888334], 5)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
+    markersLayer.addTo(map)
+  }
+})
+// --- FIN DES AJOUTS CARTE ---
 
 const generateTour = async () => {
   const result = await apiGenerateTour(selectedPlaces.value, getUsername()!, isPublic.value)
@@ -87,6 +116,8 @@ const removePlace = (index: number) => {
           <button @click="removePlace(index)">Remove</button>
         </li>
       </ol>
+
+      <div ref="mapContainer" style="height: 400px; width: 100%; border: 2px solid black; margin-bottom: 15px;"></div>
 
       <label>
         <input type="checkbox" v-model="isPublic" />
