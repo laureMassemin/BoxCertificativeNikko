@@ -51,7 +51,7 @@ def login(data: UserLogin, db: Session = Depends(get_db)):
 def search_place(name: str):
     #Coordinate return simulation
     try:
-        locations = geolocator.geocode(name, exactly_one=False, limit=3)
+        locations = geolocator.geocode(name, language="fr", exactly_one=False, limit=3)
         if not locations:
             raise HTTPException(status_code=404, detail=f"City {name} not found.")
 
