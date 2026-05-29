@@ -113,10 +113,20 @@ def generate_tour(tour_data: TourCreate, username: str, db: Session = Depends(ge
 
     return {"id": tour.id}
 
-
-
-
-
-
-
-
+@router.get("/tours/user/{username}")
+def get_user_tours(username: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    tours = db.query(Tour).filter(Tour.owner_id == user.id).all()
+    
+    return [
+        {
+            "id": t.id,
+            "total_distance": t.total_distance,
+            "is_public": t.is_public,
+            "places_count": len(t.places)
+        }
+        for t in tours
+    ]
