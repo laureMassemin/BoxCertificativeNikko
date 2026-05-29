@@ -139,7 +139,61 @@ def plan_tour(places):
     total_length = tour_length(optimized_tour, distance_matrix)
     return { "tour": ordered_places, "length": total_length }
 
+def compute_adaptive_threshold(places, percentage=0.15):
+    """
+    Calculate an adaptive distance threshold based on the average distance between all pairs of places.
+    Parameters:
+        places (list): A list of tuples containing the latitudes and longitudes of the places
+        percentage (float): The percentage of the average distance to use as the threshold (default is 15%).
+    Returns:
+        float: The computed adaptive distance threshold.
+    """
+    total_distance = 0
+    count = 0
+    
+    n = len(places)
+    for i in range(n):
+        for j in range(i + 1, n):
+            coord_i = (places[i].lat, places[i].lon)
+            coord_j = (places[j].lat, places[j].lon)
+            total_distance += distance(coord_i, coord_j)
+            count += 1
+    average_distance = total_distance / count if count > 0 else 0
+    result = percentage * average_distance
 
+    return result
+
+def compute_adaptive_threshold(places, percentage=0.15):
+    """
+    Calcule un seuil de distance adapté à l'échelle du voyage.
+    
+    Seuil = percentage × médiane des distances entre toutes les paires de villes.
+    
+    On utilise la médiane (et non la moyenne) pour la ROBUSTESSE aux valeurs
+    aberrantes : si certaines villes sont très éloignées des autres (ex : un voyage 
+    Tokyo + Paris + LA mélangé avec des villes locales), la moyenne serait tirée
+    vers le haut par les trajets transcontinentaux, ce qui ferait croire à 
+    l'algorithme que des villes pourtant lointaines sont "proches". La médiane,
+    elle, ignore ces extrêmes.
+    """
+    n = len(places)
+    if n < 2:
+        return 0
+    
+    distances = []
+    for i in range(n):
+        for j in range(i + 1, n):
+            distances.append(distance(places[i], places[j]))
+    
+    distances.sort()
+    nb = len(distances)
+    
+    if nb % 2 == 1:
+        mediane = distances[nb // 2]
+    else:
+        mediane = (distances[nb // 2 - 1] + distances[nb // 2]) / 2
+    
+    return percentage * mediane
 
 if __name__ == "__main__":
     from models import PlaceSchema
@@ -152,3 +206,6 @@ if __name__ == "__main__":
         PlaceSchema(name="Nikko",   lat=36.7198,    lon=139.6982),
         PlaceSchema(name="Sendai",  lat=38.2682,    lon=140.8694),
     ]
+
+
+
