@@ -52,6 +52,14 @@
         <button v-if="selectedPlaces.length >= 2" class="btn-generate" @click="generateTour">
           Calculate Optimal Route →
         </button>
+
+        <button
+          v-if="selectedPlaces.length >= 2"
+          class="btn-generate btn-hotels"
+          @click="generateTourHotels"
+        >
+          Generate with Hotels →
+        </button>
       </div>
     </div>
   </div>
@@ -60,7 +68,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { generateTour as apiGenerateTour, getUsername } from '../api'
+import { generateTour as apiGenerateTour, getUsername, generateTourWithHotels } from '../api'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -82,6 +90,20 @@ const isPublic = ref(false)
 const mapContainer = ref(null)
 let map: L.Map | null = null
 let markersLayer = L.layerGroup()
+
+const generateTourHotels = async () => {
+  errorMessage.value = ''
+  try {
+    const result = await generateTourWithHotels(
+      selectedPlaces.value,
+      getUsername()!,
+      isPublic.value,
+    )
+    router.push(`/trip/${result.id}`)
+  } catch (error) {
+    errorMessage.value = 'Communication error with the server.'
+  }
+}
 
 const updateMapMarkers = () => {
   if (!map) return

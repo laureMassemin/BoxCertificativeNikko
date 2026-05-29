@@ -78,3 +78,11 @@ export async function updateTourPlaces(id: number, places: any[]) {
   const res = await http.put(`/tours/${id}/places`, places)
   return res.data
 }
+
+export async function generateTourWithHotels(places: any[], username: string, isPublic: boolean) {
+  const res = await http.post(`/tourswithhotels/generate?username=${username}`, {
+    is_public: isPublic,
+    places: places,
+  })
+  return res.data
+}

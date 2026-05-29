@@ -1,12 +1,13 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from geopy.geocoders import Nominatim
-from models import UserLogin, User, Place, TourCreate, Tour, PlaceSchema
+from models import UserLogin, User, Place, TourCreate, Tour, PlaceSchema, Hotel
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from jose import jwt
 from database import get_db
 from algorithm import (plan_tour)
+from algorithm import (plan_tour_with_hotels)
 import uuid
 
 
@@ -92,15 +93,21 @@ def get_tour(id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Tour not found")
     
     sorted_places = sorted(tour.places, key=lambda p: p.order)
+    hotels = db.query(Hotel).filter(Hotel.tour_id == id).order_by(Hotel.order).all()
+
     return {
         "id": tour.id,
         "owner_username": tour.owner.username,
         "is_public": tour.is_public,
-        "share_token": tour.share_token,  
+        "share_token": tour.share_token,
         "total_distance": tour.total_distance,
         "places": [
-            {"id": p.id, "name": p.name, "lat": p.lat, "lon": p.lon, "order": p.order}
+            {"id": p.id, "name": p.name, "lat": p.lat, "lon": p.lon, "order": p.order, "hotel_id": p.hotel_id}
             for p in sorted_places
+        ],
+        "hotels": [
+            {"id": h.id, "name": h.name, "lat": h.lat, "lon": h.lon, "order": h.order}
+            for h in hotels
         ]
     }
 
@@ -127,8 +134,59 @@ def generate_tour(tour_data: TourCreate, username: str, db: Session = Depends(ge
         db.add(place)
         order+=1
     db.commit()
-
     return {"id": tour.id, "share_token": tour.share_token}
+
+@router.post("/tourswithhotels/generate")
+def generate_tour_with_hotels(tour_data: TourCreate, username: str, db: Session = Depends(get_db)):
+    if len(tour_data.places) < 2:
+        raise HTTPException(status_code=400, detail="Cannot generate a tour with less than 2 cities.")
+
+    result = plan_tour_with_hotels(tour_data.places)
+
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Save tour
+    tour = Tour(
+        owner_id=user.id,
+        is_public=tour_data.is_public,
+        total_distance=result['distance_total'],  
+        share_token=str(uuid.uuid4())
+    )
+    db.add(tour)
+    db.commit()
+    db.refresh(tour)
+
+    # Save each stage (hotel + its places)
+    for hotel_order, etape in enumerate(result['etapes']):
+        # Save hotel
+        hotel = Hotel(
+            tour_id=tour.id,
+            name=etape['hotel'].name,
+            lat=etape['hotel'].lat,
+            lon=etape['hotel'].lon,
+            order=hotel_order
+        )
+        db.add(hotel)
+        db.commit()
+        db.refresh(hotel)
+
+        # Save places linked to this hotel
+        for place_order, p in enumerate(etape['villes']):
+            place = Place(
+                tour_id=tour.id,
+                hotel_id=hotel.id,
+                name=p.name,
+                lat=p.lat,
+                lon=p.lon,
+                order=place_order
+            )
+            db.add(place)
+
+    db.commit()
+    return {"id": tour.id, "share_token": tour.share_token}
+
 @router.get("/tours/user/{username}")
 def get_user_tours(username: str, token: str, db: Session = Depends(get_db)):
     

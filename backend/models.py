@@ -33,17 +33,31 @@ class Tour(Base):
     owner = relationship("User", back_populates="tours")
     places = relationship("Place", back_populates="tour")
 
-class Place(Base):
-    """Represents a place/city in a tour"""
-    __tablename__ = "places"
+class Hotel(Base):
+    """Represents a hotel/central place in a tour stage"""
+    __tablename__ = "hotels"
     id      = Column(Integer, primary_key=True, index=True)
     tour_id = Column(Integer, ForeignKey("tours.id"), nullable=False)
     name    = Column(String, nullable=False)
     lat     = Column(Float, nullable=False)
     lon     = Column(Float, nullable=False)
-    order  = Column(Integer, nullable=False)  
+    order   = Column(Integer, nullable=False)  # order in the inter-hotel tour
 
-    tour = relationship("Tour", back_populates="places")
+    places  = relationship("Place", back_populates="hotel")
+
+class Place(Base):
+    """Represents a place/city in a tour"""
+    __tablename__ = "places"
+    id       = Column(Integer, primary_key=True, index=True)
+    tour_id  = Column(Integer, ForeignKey("tours.id"), nullable=False)
+    hotel_id = Column(Integer, ForeignKey("hotels.id"), nullable=True)  # nullable for normal tours
+    name     = Column(String, nullable=False)
+    lat      = Column(Float, nullable=False)
+    lon      = Column(Float, nullable=False)
+    order    = Column(Integer, nullable=False)
+
+    tour  = relationship("Tour", back_populates="places")
+    hotel = relationship("Hotel", back_populates="places")
 
 #Login
 class UserLogin(BaseModel):

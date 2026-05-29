@@ -4,6 +4,7 @@
     <div v-else-if="error" class="error-msg">{{ error }}</div>
 
     <div v-else>
+      <!-- Stats -->
       <div class="stats-row">
         <div class="stat">
           <div class="stat-value">{{ totalDistance }} km</div>
@@ -19,6 +20,7 @@
         </div>
       </div>
 
+      <!-- Places -->
       <div class="card">
         <h2>Places (in order)</h2>
         <ol class="places-list">
@@ -44,11 +46,29 @@
         </ol>
       </div>
 
+      <!-- Hotels (only if tour has hotels) -->
+      <div class="card" v-if="hotels.length > 0">
+        <h2>🏨 Hotel Stops (in order)</h2>
+        <ol class="places-list">
+          <li v-for="(hotel, index) in hotels" :key="hotel.id" class="place-item hotel-item">
+            <span class="place-num hotel-num">{{ index + 1 }}</span>
+            <div class="place-info">
+              <span class="place-name">{{ hotel.name }}</span>
+              <span class="place-coords"
+                >{{ hotel.lat.toFixed(4) }}, {{ hotel.lon.toFixed(4) }}</span
+              >
+            </div>
+          </li>
+        </ol>
+      </div>
+
+      <!-- Map -->
       <div class="card">
         <h2>Route Map</h2>
         <div ref="mapContainer" class="map-container"></div>
       </div>
 
+      <!-- Share -->
       <div class="share-box">
         <span class="share-label">Share link</span>
         <a :href="`http://localhost:5173/share/${trip?.share_token}`" target="_blank">
@@ -59,187 +79,6 @@
   </div>
 </template>
 
-<style scoped>
-.tours-page {
-  max-width: 760px;
-}
-
-h2 {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin-bottom: 1rem;
-}
-
-.loading-msg {
-  color: #888;
-  padding: 2rem 0;
-}
-
-.error-msg {
-  background: #fff5f5;
-  border: 1px solid #fdd;
-  color: #d44;
-  border-radius: 7px;
-  padding: 0.75rem 1rem;
-  font-size: 0.875rem;
-}
-
-.stats-row {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1.25rem;
-}
-
-.stat {
-  flex: 1;
-  background: #fff;
-  border: 1px solid #e8e8e8;
-  border-radius: 10px;
-  padding: 1rem;
-  text-align: center;
-}
-
-.stat-value {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #1a1a1a;
-}
-
-.stat-label {
-  font-size: 0.75rem;
-  color: #888;
-  margin-top: 0.25rem;
-}
-
-/* Card */
-.card {
-  background: #fff;
-  border: 1px solid #e8e8e8;
-  border-radius: 10px;
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 1.25rem;
-}
-
-/* Places */
-.places-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.place-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  background: #fafafa;
-  border: 1px solid #eee;
-  border-radius: 7px;
-  padding: 0.625rem 0.875rem;
-}
-
-.place-num {
-  width: 24px;
-  height: 24px;
-  background: #1a1a1a;
-  color: #fff;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.place-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-.place-name {
-  font-size: 0.875rem;
-  color: #1a1a1a;
-  font-weight: 500;
-}
-.place-coords {
-  font-size: 0.75rem;
-  color: #aaa;
-  font-family: monospace;
-}
-
-.place-actions {
-  display: flex;
-  gap: 0.25rem;
-}
-
-.btn-order {
-  background: none;
-  border: 1px solid #e0e0e0;
-  color: #555;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.875rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s;
-}
-
-.btn-order:hover:not(:disabled) {
-  background: #1a1a1a;
-  color: #fff;
-  border-color: #1a1a1a;
-}
-.btn-order:disabled {
-  opacity: 0.25;
-  cursor: not-allowed;
-}
-
-/* Map */
-.map-container {
-  height: 380px;
-  width: 100%;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #eee;
-}
-
-/* Share */
-.share-box {
-  background: #fff;
-  border: 1px solid #e8e8e8;
-  border-radius: 10px;
-  padding: 1rem 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  font-size: 0.875rem;
-}
-
-.share-label {
-  font-weight: 500;
-  color: #555;
-  white-space: nowrap;
-  font-size: 0.8rem;
-}
-
-.share-box a {
-  color: #1a1a1a;
-  font-family: monospace;
-  font-size: 0.78rem;
-  word-break: break-all;
-  text-decoration: none;
-}
-
-.share-box a:hover {
-  text-decoration: underline;
-}
-</style>
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
@@ -248,6 +87,15 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
 interface Place {
+  id: number
+  name: string
+  lat: number
+  lon: number
+  order: number
+  hotel_id: number | null
+}
+
+interface Hotel {
   id: number
   name: string
   lat: number
@@ -262,6 +110,7 @@ interface Trip {
   total_distance: number
   share_token: string
   places: Place[]
+  hotels: Hotel[]
 }
 
 const route = useRoute()
@@ -269,11 +118,11 @@ const tripId = route.params.tripId as string
 
 const trip = ref<Trip | null>(null)
 const places = ref<Place[]>([])
+const hotels = ref<Hotel[]>([])
 const loading = ref(true)
 const error = ref('')
 const totalDistance = ref('')
 
-// Map
 const mapContainer = ref(null)
 let map: L.Map | null = null
 let markersLayer = L.layerGroup()
@@ -281,16 +130,11 @@ let polyline: L.Polyline | null = null
 
 const updateMap = () => {
   if (!map) return
-
-  // Clear markers and polyline
   markersLayer.clearLayers()
-  if (polyline) {
-    map.removeLayer(polyline)
-  }
-
+  if (polyline) map.removeLayer(polyline)
   if (places.value.length === 0) return
 
-  // Add circle markers
+  // Blue markers for places
   places.value.forEach((place, index) => {
     L.circleMarker([place.lat, place.lon], {
       radius: 8,
@@ -303,16 +147,34 @@ const updateMap = () => {
       .addTo(markersLayer)
   })
 
-  // Draw route line including return to start
+  // Red markers for hotels
+  hotels.value.forEach((hotel, index) => {
+    L.circleMarker([hotel.lat, hotel.lon], {
+      radius: 11,
+      fillColor: '#e74c3c',
+      color: '#fff',
+      weight: 2,
+      fillOpacity: 1,
+    })
+      .bindPopup(`🏨 Hotel ${index + 1}: ${hotel.name}`)
+      .addTo(markersLayer)
+  })
+
+  // Route line
   const coords = places.value.map((p) => [p.lat, p.lon] as [number, number])
   coords.push(coords[0]!)
-  polyline = L.polyline(coords, { color: 'blue' }).addTo(map)
+  polyline = L.polyline(coords, { color: '#3388ff', weight: 2 }).addTo(map)
 
-  // Fit map to show all markers
+  // Hotel route line if hotels exist
+  if (hotels.value.length > 1) {
+    const hotelCoords = hotels.value.map((h) => [h.lat, h.lon] as [number, number])
+    hotelCoords.push(hotelCoords[0]!)
+    L.polyline(hotelCoords, { color: '#e74c3c', weight: 2, dashArray: '6 4' }).addTo(map)
+  }
+
   map.fitBounds(polyline.getBounds())
 }
 
-// Update map when places change
 watch(
   places,
   () => {
@@ -362,6 +224,7 @@ onMounted(async () => {
         return
       }
       places.value = [...trip.value.places]
+      hotels.value = [...(trip.value.hotels || [])]
     }
   } catch (e) {
     error.value = 'Trip not found'
@@ -369,7 +232,6 @@ onMounted(async () => {
     loading.value = false
   }
 
-  // Wait for DOM to update before initializing map
   await nextTick()
 
   if (mapContainer.value) {
@@ -380,3 +242,189 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.tours-page {
+  max-width: 760px;
+}
+
+h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 1rem;
+}
+
+.loading-msg {
+  color: #888;
+  padding: 2rem 0;
+}
+
+.error-msg {
+  background: #fff5f5;
+  border: 1px solid #fdd;
+  color: #d44;
+  border-radius: 7px;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+}
+
+.stats-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.stat {
+  flex: 1;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+.stat-label {
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 0.25rem;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.places-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.place-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 7px;
+  padding: 0.625rem 0.875rem;
+}
+
+.hotel-item {
+  background: #fff9f9;
+  border-color: #fde8e8;
+}
+
+.place-num {
+  width: 24px;
+  height: 24px;
+  background: #1a1a1a;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.hotel-num {
+  background: #e74c3c;
+}
+
+.place-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.place-name {
+  font-size: 0.875rem;
+  color: #1a1a1a;
+  font-weight: 500;
+}
+.place-coords {
+  font-size: 0.75rem;
+  color: #aaa;
+  font-family: monospace;
+}
+
+.place-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.btn-order {
+  background: none;
+  border: 1px solid #e0e0e0;
+  color: #555;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.btn-order:hover:not(:disabled) {
+  background: #1a1a1a;
+  color: #fff;
+  border-color: #1a1a1a;
+}
+.btn-order:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.map-container {
+  height: 380px;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #eee;
+}
+
+.share-box {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.875rem;
+}
+
+.share-label {
+  font-weight: 500;
+  color: #555;
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+
+.share-box a {
+  color: #1a1a1a;
+  font-family: monospace;
+  font-size: 0.78rem;
+  word-break: break-all;
+  text-decoration: none;
+}
+
+.share-box a:hover {
+  text-decoration: underline;
+}
+</style>
