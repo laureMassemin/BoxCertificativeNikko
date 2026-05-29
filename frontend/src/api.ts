@@ -73,3 +73,8 @@ export async function getTripByToken(token: string) {
   const res = await http.get(`/tours/share/${token}`)
   return res.data
 }
+
+export async function updateTourPlaces(id: number, places: any[]) {
+  const res = await http.put(`/tours/${id}/places`, places)
+  return res.data
+}

@@ -31,7 +31,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { getTrip, getUsername, calculateDistance } from '../api'
+import { getTrip, getUsername, calculateDistance, updateTourPlaces } from '../api'
 
 interface Place {
   id: number
@@ -60,29 +60,27 @@ const error = ref('')
 const totalDistance = ref('')
 
 async function recalculate() {
-  console.log('Sending places:', JSON.stringify(places.value))
   const result = await calculateDistance(places.value)
-  console.log('Result:', result)
   totalDistance.value = result.toFixed(2)
-  console.log('totalDistance:', totalDistance.value)
+  await updateTourPlaces(Number(tripId), places.value)
 }
 async function moveUp(index: number) {
   if (index === 0) return
-  const newPlaces = [...places.value] // copie du tableau
+  const newPlaces = [...places.value]
   const tmp = newPlaces[index - 1]!
   newPlaces[index - 1] = newPlaces[index]!
   newPlaces[index] = tmp
-  places.value = newPlaces // réassigne pour forcer la réactivité Vue
+  places.value = newPlaces
   await recalculate()
 }
 
 async function moveDown(index: number) {
   if (index === places.value.length - 1) return
-  const newPlaces = [...places.value] // copie du tableau
+  const newPlaces = [...places.value]
   const tmp = newPlaces[index + 1]!
   newPlaces[index + 1] = newPlaces[index]!
   newPlaces[index] = tmp
-  places.value = newPlaces // réassigne pour forcer la réactivité Vue
+  places.value = newPlaces
   await recalculate()
 }
 onMounted(async () => {

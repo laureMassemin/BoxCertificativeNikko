@@ -164,3 +164,27 @@ def get_tour_by_token(token: str, db: Session = Depends(get_db)):
             for p in sorted_places
         ]
     }
+
+@router.put("/tours/{id}/places")
+def update_tour_places(id: int, places: List[PlaceSchema], db: Session = Depends(get_db)):
+    tour = db.query(Tour).filter(Tour.id == id).first()
+    if not tour:
+        raise HTTPException(status_code=404, detail="Tour not found")
+
+    # Delete old places
+    db.query(Place).filter(Place.tour_id == id).delete()
+
+    # Recalculate total distance
+    from algorithm import personalised_tour_length
+    total = personalised_tour_length(places)
+
+    # Save new places with new order
+    for i, p in enumerate(places):
+        new_place = Place(tour_id=id, name=p.name, lat=p.lat, lon=p.lon, order=i)
+        db.add(new_place)
+
+    # Update total distance
+    tour.total_distance = round(total, 2)
+    db.commit()
+
+    return {"total_distance": round(total, 2)}
