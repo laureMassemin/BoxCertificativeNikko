@@ -40,39 +40,28 @@
 </template>
 
 <script setup lang="ts">
-// Import tools
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { getUserTours, getUsername } from '../api'
+import { login } from '../api'
 
 const router = useRouter()
+const username = ref('')
+const password = ref('')
+const error = ref('')
 
-// Variables
-const trips = ref([])
-const loading = ref(true) // Loading state
-const error = ref('')     // Error message
-
-// Run when page loads
-onMounted(async () => {
+async function handleLogin() {
   try {
-    const username = getUsername()
-    
-    // Check if logged in
-    if (!username) { 
-      router.push('/login')
-      return 
+    await login(username.value, password.value)
+    const redirect = router.currentRoute.value.query.redirect as string
+    router.push(redirect || '/trip')
+  } catch (e: any) {
+    if (e.response?.status === 401) {
+      error.value = 'Wrong username or password'
+    } else {
+      error.value = 'An error occurred'
     }
-    
-    // Fetch user trips
-    trips.value = await getUserTours(username)
-  } catch (e) {
-    // Show error
-    error.value = 'Could not load trips'
-  } finally {
-    // Stop loading
-    loading.value = false
   }
-})
+}
 </script>
 
 <style scoped>
