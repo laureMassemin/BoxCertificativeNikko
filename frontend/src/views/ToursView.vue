@@ -18,6 +18,13 @@
           <button @click="moveDown(index)" :disabled="index === places.length - 1">⬇</button>
         </li>
       </ol>
+
+      <!-- Carte Leaflet -->
+      <div
+        ref="mapContainer"
+        style="height: 400px; width: 100%; border: 2px solid black; margin: 15px 0"
+      ></div>
+
       <p>
         Share link:
         <a :href="`http://localhost:5173/share/${trip?.share_token}`">
@@ -27,11 +34,12 @@
     </div>
   </div>
 </template>
-
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { getTrip, getUsername, calculateDistance, updateTourPlaces } from '../api'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 
 interface Place {
   id: number
@@ -40,12 +48,13 @@ interface Place {
   lon: number
   order: number
 }
+
 interface Trip {
   id: number
   owner_username: string
   is_public: boolean
   total_distance: number
-  share_token: string // ← ajoute ça
+  share_token: string
   places: Place[]
 }
 
@@ -56,14 +65,62 @@ const trip = ref<Trip | null>(null)
 const places = ref<Place[]>([])
 const loading = ref(true)
 const error = ref('')
-
 const totalDistance = ref('')
+
+// Map
+const mapContainer = ref(null)
+let map: L.Map | null = null
+let markersLayer = L.layerGroup()
+let polyline: L.Polyline | null = null
+
+const updateMap = () => {
+  if (!map) return
+
+  // Clear markers and polyline
+  markersLayer.clearLayers()
+  if (polyline) {
+    map.removeLayer(polyline)
+  }
+
+  if (places.value.length === 0) return
+
+  // Add circle markers
+  places.value.forEach((place, index) => {
+    L.circleMarker([place.lat, place.lon], {
+      radius: 8,
+      fillColor: '#3388ff',
+      color: '#fff',
+      weight: 2,
+      fillOpacity: 1,
+    })
+      .bindPopup(`${index + 1}. ${place.name}`)
+      .addTo(markersLayer)
+  })
+
+  // Draw route line including return to start
+  const coords = places.value.map((p) => [p.lat, p.lon] as [number, number])
+  coords.push(coords[0]!)
+  polyline = L.polyline(coords, { color: 'blue' }).addTo(map)
+
+  // Fit map to show all markers
+  map.fitBounds(polyline.getBounds())
+}
+
+// Update map when places change
+watch(
+  places,
+  () => {
+    updateMap()
+  },
+  { deep: true },
+)
 
 async function recalculate() {
   const result = await calculateDistance(places.value)
   totalDistance.value = result.toFixed(2)
   await updateTourPlaces(Number(tripId), places.value)
 }
+
 async function moveUp(index: number) {
   if (index === 0) return
   const newPlaces = [...places.value]
@@ -83,6 +140,7 @@ async function moveDown(index: number) {
   places.value = newPlaces
   await recalculate()
 }
+
 onMounted(async () => {
   try {
     trip.value = await getTrip(Number(tripId))
@@ -95,17 +153,24 @@ onMounted(async () => {
       if (!isPublic && !isOwner) {
         error.value = 'You do not have access to this tour'
         trip.value = null
+        return
       }
       places.value = [...trip.value.places]
-      console.log(
-        'Ordre initial:',
-        places.value.map((p) => p.name),
-      )
     }
   } catch (e) {
     error.value = 'Trip not found'
   } finally {
     loading.value = false
+  }
+
+  // Wait for DOM to update before initializing map
+  await nextTick()
+
+  if (mapContainer.value) {
+    map = L.map(mapContainer.value).setView([46.603354, 1.888334], 5)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
+    markersLayer.addTo(map)
+    updateMap()
   }
 })
 </script>
