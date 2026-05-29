@@ -25,7 +25,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { getTrip, getUsername } from '../api'
+import { getTrip, getUsername, calculateDistance } from '../api'
 
 interface Place {
   id: number
@@ -52,25 +52,31 @@ const loading = ref(true)
 const error = ref('')
 
 const totalDistance = ref('')
-
-// async function recalculate() {
-//   totalDistance.value = await calculateDistance(places.value)
-// }
-
+async function recalculate() {
+  console.log('Sending places:', JSON.stringify(places.value))
+  const result = await calculateDistance(places.value)
+  console.log('Result:', result)
+  totalDistance.value = result.toFixed(2)
+  console.log('totalDistance:', totalDistance.value)
+}
 async function moveUp(index: number) {
   if (index === 0) return
-  const tmp = places.value[index - 1]!
-  places.value[index - 1] = places.value[index]!
-  places.value[index] = tmp
-  //await recalculate()
+  const newPlaces = [...places.value] // copie du tableau
+  const tmp = newPlaces[index - 1]!
+  newPlaces[index - 1] = newPlaces[index]!
+  newPlaces[index] = tmp
+  places.value = newPlaces // réassigne pour forcer la réactivité Vue
+  await recalculate()
 }
 
 async function moveDown(index: number) {
   if (index === places.value.length - 1) return
-  const tmp = places.value[index + 1]!
-  places.value[index + 1] = places.value[index]!
-  places.value[index] = tmp
-  //await recalculate()
+  const newPlaces = [...places.value] // copie du tableau
+  const tmp = newPlaces[index + 1]!
+  newPlaces[index + 1] = newPlaces[index]!
+  newPlaces[index] = tmp
+  places.value = newPlaces // réassigne pour forcer la réactivité Vue
+  await recalculate()
 }
 onMounted(async () => {
   try {
@@ -84,9 +90,12 @@ onMounted(async () => {
       if (!isPublic && !isOwner) {
         error.value = 'You do not have access to this tour'
         trip.value = null
-      } else {
-        places.value = [...trip.value.places]
       }
+      places.value = [...trip.value.places]
+      console.log(
+        'Ordre initial:',
+        places.value.map((p) => p.name),
+      )
     }
   } catch (e) {
     error.value = 'Trip not found'

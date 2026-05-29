@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from geopy.geocoders import Nominatim
-from models import UserLogin, User, Place, TourCreate, Tour
+from models import UserLogin, User, Place, TourCreate, Tour, PlaceSchema
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from jose import jwt
@@ -140,3 +140,8 @@ def get_user_tours(username: str, token: str, db: Session = Depends(get_db)):
         }
         for t in tours
     ]
+@router.post("/distance")
+def calculate_distance(places: List[PlaceSchema]):
+    from algorithm import personalised_tour_length
+    total = personalised_tour_length(places)
+    return {"total_distance": round(total, 2)}
