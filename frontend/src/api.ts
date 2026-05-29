@@ -57,6 +57,9 @@ export async function generateTour(places: any[], username: string, isPublic: bo
 }
 
 export async function getUserTours(username: string) {
-  const res = await http.get(`/tours/user/${username}`)
+  const token = getToken()
+  const res = await http.get(`/tours/user/${username}`, {
+    params: { token },
+  })
   return res.data
 }

@@ -19,3 +19,13 @@ const router = createRouter({
 })
 
 export default router
+
+import { isLoggedIn } from './api'
+
+router.beforeEach((to, from, next) => {
+  if (to.meta.requiresAuth && !isLoggedIn()) {
+    next('/login')
+  } else {
+    next()
+  }
+})

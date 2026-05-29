@@ -112,15 +112,25 @@ def generate_tour(tour_data: TourCreate, username: str, db: Session = Depends(ge
     db.commit()
 
     return {"id": tour.id}
-
 @router.get("/tours/user/{username}")
-def get_user_tours(username: str, db: Session = Depends(get_db)):
+def get_user_tours(username: str, token: str, db: Session = Depends(get_db)):
+    
+    # Verify token
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = int(payload.get("sub"))
+    except:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    # Check that the token belongs to the requested username
     user = db.query(User).filter(User.username == username).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    if user.id != user_id:
+        raise HTTPException(status_code=403, detail="You can only view your own trips")
+
     tours = db.query(Tour).filter(Tour.owner_id == user.id).all()
-    
     return [
         {
             "id": t.id,
