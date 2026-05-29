@@ -77,7 +77,7 @@ Go to **http://localhost:8000/docs** and test:
 
 ---
 
-## 5. Technical documentation
+## 5. Documentation
 
 Generate or update the auto-generated API documentation:
 
@@ -87,6 +87,9 @@ source venv/bin/activate
 pdoc api.py algorithm.py models.py database.py --docformat google --output-dir docs/
 ```
 
-Open `backend/docs/api.html` in your browser to view the full documentation.
+Open `backend/docs/index.html` in your browser to view the full documentation.
+Open `docs/technical_documentation.md`
+Open `docs/test_protocole.md`
+Open `docs/user_manual.md`
 
 ---
