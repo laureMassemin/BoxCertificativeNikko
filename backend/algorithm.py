@@ -23,14 +23,20 @@ def distance (Va, Vb):
 
 def personalised_tour_length(places):
     """
-    Calculate the total length of a tour by summing the distances between consecutive places, including the return trip to the starting point.
+    Calculate the total length of a tour that visits a list of places in a specific order, including the return trip to the starting point.
     Parameters:
-        places (list): A list of tuples containing the latitudes and longitudes of the places
+        places (list): A list of PlaceSchema objects representing the places in the tour.
     Returns:
-        float: The total length of the tour.
+        float: The total length of the tour in kilometers.
     """
-    pass
-
+    n = len(places)
+    total_length = 0
+    for i in range(n - 1):
+        coord_i = (places[i].lat, places[i].lon)
+        coord_j = (places[i + 1].lat, places[i + 1].lon)
+        total_length += distance(coord_i, coord_j)
+    total_length += distance((places[-1].lat, places[-1].lon), (places[0].lat, places[0].lon))
+    return total_length
 
 def build_distance_matrix(places):
     """
@@ -133,6 +139,8 @@ def plan_tour(places):
     total_length = tour_length(optimized_tour, distance_matrix)
     return { "tour": ordered_places, "length": total_length }
 
+
+
 if __name__ == "__main__":
     from models import PlaceSchema
     
@@ -141,10 +149,6 @@ if __name__ == "__main__":
         PlaceSchema(name="Kyoto",   lat=34.9946315, lon=135.7344318),
         PlaceSchema(name="Osaka",   lat=34.6937,    lon=135.5023),
         PlaceSchema(name="Sapporo", lat=43.0618,    lon=141.3545),
+        PlaceSchema(name="Nikko",   lat=36.7198,    lon=139.6982),
+        PlaceSchema(name="Sendai",  lat=38.2682,    lon=140.8694),
     ]
-    
-    result = plan_tour(places)
-    print("Distance totale :", result["length"], "km")
-    print("Ordre optimal :")
-    for p in result["tour"]:
-        print(f"  - {p.name}")
